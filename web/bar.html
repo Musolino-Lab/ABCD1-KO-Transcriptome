@@ -95,30 +95,6 @@
     <script type="text/javascript">
 
 /////////////////////////////////////////////////////////////////////////////
-                    ///////    Helper Functions    ///////
-/////////////////////////////////////////////////////////////////////////////
-
-let range = n => [...Array(n).keys()];
-
-let nWise = (n, array) => {
-  iterators = Array(n).fill().map(() => array[Symbol.iterator]());
-  iterators.forEach((it, index) => Array(index).fill().forEach(() => it.next()));
-  return Array(array.length - n + 1).fill().map(() => (iterators.map(it => it.next().value)));
-};
-
-let pairWise = (array) => nWise(2, array);
-
-function flatten(array) {
-  return array.reduce(function (flat, toFlatten) {
-    return flat.concat(Array.isArray(toFlatten) ? flatten(toFlatten) : toFlatten);
-  }, []);
-}
-
-function isNumber(n) {
-    return !isNaN(parseFloat(n)) && isFinite(n);
-}
-
-/////////////////////////////////////////////////////////////////////////////
                       ///////    Variables    ///////
 /////////////////////////////////////////////////////////////////////////////
 
@@ -150,7 +126,7 @@ var color = d3.scaleLinear().domain([-x_max, 0, x_max])
 /////////////////////////////////////////////////////////////////////////////
 
 var svg = d3.select("#graph-container").append("svg").attr("xmlns", "http://www.w3.org/2000/svg").attr("xmlns:xlink", "http://www.w3.org/1999/xlink");
-var g = svg.append("g").attr("transform", "translate("+margin.left+","+margin.top+")");;
+var g = svg.append("g").attr("transform", "translate("+margin.left+","+margin.top+")");
 svg.style("cursor", "move");
 
 var bar  = g.selectAll(".bar");
