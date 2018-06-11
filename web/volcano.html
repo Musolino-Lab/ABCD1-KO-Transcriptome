@@ -228,7 +228,7 @@ var dots = g.selectAll(".dot").data(data).enter()
             .style("cursor", "pointer")
             .on('mouseenter', tipEnter)
             .on('mousemove', tipMove)
-            .on('mouseleave', (d) => tooltip.style('visibility', 'hidden') )
+            .on('mouseleave', tipExit)
             .append('circle')
             .attr('class', 'dot')
             .attr('r', point_size)
@@ -255,9 +255,10 @@ function tipEnter(d) {
 
 function tipMove() {
     tooltip.style("top", (event.pageY - 5) + "px")
-           .style("left", (event.pageX + 20) + "px");
+           .style("left", (event.pageX + 10) + "px");
 }
 
+function tipExit() { tooltip.style('visibility', 'hidden'); }
 
 // Thresholds
 var y_threshold = g.append("line")
@@ -392,7 +393,10 @@ svg.call(d3.zoom()
            .scaleExtent([1 / 2, 16])
            .on("zoom", zoomed));
 
-function zoomed() { g.attr("transform", d3.event.transform); }
+function zoomed() {
+    g.attr("transform", d3.event.transform);
+    tipExit();
+}
 
 
 
@@ -464,10 +468,12 @@ var form = new Awesomplete(input, {
     maxItems: 30,
 });
 document.addEventListener('awesomplete-selectcomplete', function(e) {
-    selected_gene = d3.select('#'+e.text.value)._groups[0][0].__data__;
+    element = d3.select('#'+e.text.value)
+    selected_gene = element._groups[0][0].__data__;
+    position = element.node().getBoundingClientRect();
     tipEnter(selected_gene);
-    tooltip.style("top", (y(selected_gene.q) + margin.top - 7) + "px")
-           .style("left", (x(selected_gene.logFC) + margin.left + 9) + "px");
+    tooltip.style("top", (position.y - 5) + "px")
+           .style("left", (position.x + 10) + "px");
 
 });
 
