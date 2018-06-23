@@ -1,0 +1,151 @@
+<!doctype html>
+<html xmlns="http://www.w3.org/1999/xhtml">
+
+<head>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta http-equiv="Content-Type" content="text/html;charset=utf-8"/>
+
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css" integrity="sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm" crossorigin="anonymous">
+    <!-- <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css"> -->
+    <!-- <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/awesomplete/1.1.2/awesomplete.css" /> -->
+
+    <style type="text/css">
+        h1 {
+            font-weight: 100;
+            /*margin-bottom: 2rem;*/
+        }
+        h4 {
+            /*margin-bottom: 1rem;*/
+
+        }
+
+        .abcd1-container {
+            margin-top: 4rem;
+            margin-bottom: 4rem;
+        }
+
+        .abcd1-column-left {
+            border-right: 1px solid lightgrey;
+            padding: 2rem;
+            padding-right: 4rem;
+        }
+
+
+        .abcd1-column-right {
+            padding: 2rem;
+            padding-left: 4rem;
+            padding-right: 4rem;
+
+        }
+
+        .link-unstyled, .link-unstyled:link, .link-unstyled:hover {
+            color: inherit;
+        }
+        .card-img-top {
+            padding: 1rem;
+        }
+
+    </style>
+
+    <title>ABCD1-knockout transcriptome</title>
+
+</head>
+<body>
+
+
+    <div id="graph-container"></div>
+
+    <div class="container abcd1-container">
+
+        <div class="row">
+
+            <div class="col-12 col-lg-7 abcd1-column-left">
+                <h1>ABCD1-knockout transcriptome</h1>
+                <h6>Yamuna, Sali, Alex, Christian, Patty, etc...</h6>
+
+                <br>
+
+                <h5><a href="#">Read our Paper</a></h5>
+                <h5><a href="#">Download our processed transcriptomic data</a></h5>
+                <h5><a href="#">Download our raw transcriptomic data</a></h5>
+                <h5><a href="#">Download our other data (lipidomics, contrast imaging, etc..)</a></h5>
+
+                <br>
+
+                <h4>Abstract</h4>
+
+                <p>Coming soon</p>
+
+<!--                 <p>X-linked adrenoleukodystrophy (ALD) is a devastating neurologic disorder caused by
+                mutations in the ABCD1 gene, a peroxisomal half transporter and characterized by the
+                accumulation of very long-chain fatty acids (VLCFA) in plasma and affected tissues
+                that affects 1:17,000 individuals in the U.S. While women (heterozygote ABCD1 mutation
+                carriers) are protected up to 65% of male patients (hemizygote) will convert to a devastating
+                rapidly progressive form of inflammatory demyelination (cerebral ALD, CALD) that leads to a
+                vegetative state or death within 2-3 years. Why many, but not all, males with ALD (∼65%)
+                develop cerebral demyelination remains an enigma. Blood brain barrier (BBB) disruption,
+                and ex-vivo histopathology demonstrating altered endothelial function and increased p
+                ermeability to monocytes, has for a long time been implicated as crucial to the pathopysiology of CALD.
+                To date the signaling pathways implicated in BBB dysfunction remain elusive due to lack of
+                cerebral phenotype on the ABCD1 K0 mouse model and difficulties to dissect primary gene effects
+                from secondary responses to the surrounding inflammation in post-mortem tissue from patients.
+                Our preliminary work on human brain microvascular endothelial cells (hBMEC) suggests that loss of
+                ABCD1 leads to direct changes in tight-junction and adhesion molecules expression independently
+                of the accumulation of VLCFA. To identify the underlying signaling pathways implicated in
+                this brain endothelial cells dysfunction we performed RNA-sequencing of human and mouse microvascular
+                endothelial cells and confirm their physiological implications by using functional assays.
+                Through transcriptome analysis, we identify a larger number of genes with potential impact
+                upon endothelial activation, remodeling and barrier function in ALD in hBMEC but not in mBMEC.
+                By comparison with gene sets implicated in other white matter diseases we found shared gene
+                expression patterns. This analysis, coupled with assays that measure angiogenesis and
+                monocyte-endothelial cell interactions, indicate that loss of ABCD1 leads to impair
+                endothelial remodeling and barrier function.</p> -->
+
+
+            </div>
+            <div class="col-12 col-lg-5 abcd1-column-right">
+
+                <h1>Explore our data</h1>
+
+                <br>
+
+                <a href="volcano.html" class="link-unstyled"><div class="card text-center mb-3">
+                    <img class="card-img-top" src="volcano.png" alt="Volcano Plot">
+                    <div class="card-body">
+                        <h5 class="card-title">Interactive Volcano Plot</h5>
+                    </div>
+                </div></a>
+
+                <a href="bar.html" class="link-unstyled"><div class="card text-center mb-3">
+                    <img class="card-img-top" src="bar.png" alt="Pathway Bar Plot">
+                    <div class="card-body">
+                        <h5 class="card-title">Interactive Pathway Bar Plot</h5>
+                    </div>
+                </div></a>
+
+                <a href="graph.html" class="link-unstyled"><div class="card text-center mb-3">
+                    <img class="card-img-top" src="graph.png" alt="Graph Visualization">
+                    <div class="card-body">
+                        <h5 class="card-title">Interactive Graph Visualization</h5>
+                    </div>
+                </div></a>
+
+            </div>
+
+        </div>
+    </div>
+
+
+
+    <script src="https://code.jquery.com/jquery-3.2.1.slim.min.js" integrity="sha384-KJ3o2DKtIkvYIK3UENzmM7KCkRr/rE9/Qpg6aAZGJwFDMVNA/GpGFF93hXpG5KkN" crossorigin="anonymous"></script>
+    <!-- <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.12.9/umd/popper.min.js" integrity="sha384-ApNbgh9B+Y1QKtv3Rn7W3mgPxhU9K/ScQsAP7hUibX39j7fakFPskvXusvfa0b4Q" crossorigin="anonymous"></script> -->
+    <!-- <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/js/bootstrap.min.js" integrity="sha384-JZR6Spejh4U02d8jOt6vLEHfe/JQGiRRSQQxSfFWpi1MquVdAyjUar5+76PVCmYl" crossorigin="anonymous"></script> -->
+
+    <script type="text/javascript" src="https://d3js.org/d3.v4.min.js"></script>
+
+    <!-- <script src="https://cdnjs.cloudflare.com/ajax/libs/awesomplete/1.1.2/awesomplete.js"></script> -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/underscore.js/1.9.1/underscore-min.js"></script>
+
+</body>
+
+</html>
