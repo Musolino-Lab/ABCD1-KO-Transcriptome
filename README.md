@@ -1,5 +1,4 @@
-# ABCD1
+# ABCD1 Knockout Transcriptome
 
-My work on ALD.
 
 
