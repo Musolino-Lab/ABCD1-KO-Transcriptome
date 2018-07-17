@@ -1,0 +1,364 @@
+<!doctype html>
+<html xmlns="http://www.w3.org/1999/xhtml">
+
+<head>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta http-equiv="Content-Type" content="text/html;charset=utf-8"/>
+
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css" integrity="sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm" crossorigin="anonymous">
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/awesomplete/1.1.2/awesomplete.css" />
+
+    <style type="text/css">
+        h1 { font-weight: 100; }
+        #graph-container {
+            top: 0;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            position: fixed;
+        }
+
+        .go-picker {
+            width: 590px;
+            margin: 30px;
+            z-index: 1000;
+            transition: 0.4s transform ease-out;
+        }
+
+        .go-picker.hidden {
+            transform: translate(-550px);
+        }
+
+        .fa:before {
+            font-size: 2rem;
+            color: black;
+            content: "\f104";
+            position: relative;
+            transform: rotate(90deg);
+        }
+        .fa {
+            padding: 0.8rem;
+            transition: 0.4s transform ease-in-out;
+        }
+        .hidden .fa {
+            transform: rotate(180deg);
+        }
+
+        .axis line, .grid line {
+            shape-rendering: crispEdges;
+        }
+        .awesomplete {
+            display: block !important;
+        }
+        .link-unstyled, .link-unstyled:link {
+            color: inherit;
+            text-decoration: inherit;
+        }
+        .link-unstyled:hover {
+            text-decoration: inherit;
+        }
+
+    </style>
+
+    <title>ABCD1-knockout transcriptome</title>
+
+</head>
+<body>
+
+
+    <div id="graph-container"></div>
+
+    <div class="container-fluid">
+
+        <div class="row">
+            <div class="go-picker">
+                <div class="card">
+                    <div class="card-header">
+                        <a class="pull-right" role="button"><i class="fa" id="hide-show"></i></a>
+                        <h1><a href="index.html" class="link-unstyled">ABCD1-knockout transcriptome</a></h1>
+                        <p><a id="download" href="#">Download SVG</a> | <a id="degenes" href="#">Download shown gene list</a></p>
+
+                        <nav>
+                            <div class="nav nav-tabs card-header-tabs" role="tablist">
+                                <a class="nav-item nav-link active">hBMEC</a>
+
+                            </div>
+                        </nav>
+
+                    </div>
+                    <div class="tab-content collapse show" id="collapsable">
+                        <div class="tab-pane fade show active card-body" id="hBMEC" role="tabpanel">
+
+                            <div class="row">
+                                <div class="form-group col-6">
+                                    <label for="q_threshold">-log₁₀ q-value threshold:</label>
+                                    <input type="number" class="form-control" id="q_threshold" value="0" />
+                                </div>
+                                <div class="form-group col-6">
+                                    <label for="fc_threshold">log₂ fold-change threshold:</label>
+                                    <input type="number" class="form-control" id="fc_threshold" value="0" />
+                                </div>
+                            </div>
+                            <hr>
+                            <label for="chooseGO">Gene Ontology Terms:</label>
+                            <input class="form-control" id="chooseGO" placeholder="Choose a GO Term..." />
+                            <hr>
+                            <label for="chooseGO">MSigDB Canonical Pathways:</label>
+                            <input class="form-control" id="choosePathway" placeholder="Choose a Gene Set..." />
+
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+
+    <script src="https://code.jquery.com/jquery-3.2.1.slim.min.js" integrity="sha384-KJ3o2DKtIkvYIK3UENzmM7KCkRr/rE9/Qpg6aAZGJwFDMVNA/GpGFF93hXpG5KkN" crossorigin="anonymous"></script>
+    <!-- <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.12.9/umd/popper.min.js" integrity="sha384-ApNbgh9B+Y1QKtv3Rn7W3mgPxhU9K/ScQsAP7hUibX39j7fakFPskvXusvfa0b4Q" crossorigin="anonymous"></script> -->
+    <!-- <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/js/bootstrap.min.js" integrity="sha384-JZR6Spejh4U02d8jOt6vLEHfe/JQGiRRSQQxSfFWpi1MquVdAyjUar5+76PVCmYl" crossorigin="anonymous"></script> -->
+
+    <script type="text/javascript" src="https://d3js.org/d3.v4.min.js"></script>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/awesomplete/1.1.2/awesomplete.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/underscore.js/1.9.1/underscore-min.js"></script>
+
+    <script type="text/javascript">
+
+/////////////////////////////////////////////////////////////////////////////
+                      ///////    Variables    ///////
+/////////////////////////////////////////////////////////////////////////////
+
+var margin = {top: 100, right: 100, bottom: 0, left: 100};
+
+var w = window.innerWidth - (margin.left + margin.right);
+var h = window.innerHeight - (margin.top + margin.bottom);
+
+var absolute_axis = true;
+var relative_axis = false;
+var margin_between_axes = 10;
+
+var animation_out_duration = 700;
+var animation_in_duration = 700;
+
+
+var fc_threshold = 0;
+var q_threshold = 0;
+let is_differential = (d) => d.q > q_threshold && Math.abs(d.logFC) > fc_threshold;
+
+/////////////////////////////////////////////////////////////////////////////
+                      ///////    Set Up Chart    ///////
+/////////////////////////////////////////////////////////////////////////////
+
+var svg = d3.select("#graph-container").append("svg").attr("xmlns", "http://www.w3.org/2000/svg").attr("xmlns:xlink", "http://www.w3.org/1999/xlink");
+var g = svg.append("g").attr("transform", "translate("+margin.left+","+margin.top+")");
+svg.style("cursor", "move");
+
+var bar  = g.selectAll(".bar");
+var text = g.selectAll(".text");
+var title = g.selectAll(".title");
+
+var x_max    = 1000;  // d3.max()
+
+var x_pos = d3.scaleLinear().domain([0, x_max]).rangeRound([w/2 + 50, w]).nice();
+
+pos_axis = d3.axisTop(x_pos);
+g.append("g")
+ .attr("class", "axis axis--x")
+ .call(pos_axis);
+
+var pos_grid = d3.axisTop(x_pos).tickFormat("").tickSize(-h);
+
+var grid_right = g.append("g")
+                  .attr("class", "grid")
+                  .style("stroke", "#ddd")
+                  .style("opacity", 0.1)
+                  .call(pos_grid);
+
+
+var logFCs = [];
+var title_text = "";
+
+/////////////////////////////////////////////////////////////////////////////
+                      ///////    Re-Draw Chart    ///////
+/////////////////////////////////////////////////////////////////////////////
+
+function restart(selected_gene_set_name, selected_genes) {
+
+    if (selected_genes !== undefined) {
+        logFCs = _.pick(human, selected_genes);
+        title_text = selected_gene_set_name;
+    }
+
+    data = _(Object.entries(logFCs)).sortBy(gene_and_data => -gene_and_data[1]['logFC'])
+                                    .map(gene_and_data => {return {
+                                        'id':gene_and_data[0],
+                                        'logFC':gene_and_data[1]['logFC'],
+                                        'q':gene_and_data[1]['q']
+                                    }}).filter(is_differential);
+
+    index = {}; data.forEach((obj, i) => index[obj.id] = i+1);
+    y_max = (data.length - 1) * (bar_thickness + margin_between_bars) + margin.top
+
+    let y = (id) => index[id] * (bar_thickness + margin_between_bars);
+    let x_start = (x) => x > 0 ? x_pos(0) : x_neg(x);
+    let x_width = (x) => x > 0 ? x_pos(x)-x_pos(0) : x_neg(0)-x_neg(x);
+    let x_start_before_animation = (x) => x > 0 ? x_pos(0) : x_neg(0);
+
+    // title
+    title = title.data([]);
+    title.exit().remove();
+    title = title.data([title_text]);
+    title = title.enter()
+                 .append("text")
+                 .attr("font-family", "sans-serif")
+                 .attr("class", "title")
+                 .text(title_text)
+                 .style("text-anchor", "middle")
+                 .attr("x", (x_pos(0) + x_neg(0)) / 2)
+                 .attr("y", 0 )
+                 .attr("dy", "-3em");
+
+    // gene symbols
+    text = text.data([]);
+    text.exit().remove();
+    text = text.data(data);
+    text = text.enter()
+               .append("a")
+               .attr("xlink:href", (d) => "http://www.genecards.org/cgi-bin/carddisp.pl?gene="+d.id)
+               .style("cursor", "pointer")
+               .append("text")
+               .attr("font-family", "sans-serif")
+               .attr("class", "text")
+               .text((d) => d.id )
+               .style("text-anchor", "middle")
+               .attr("x", (x_pos(0) + x_neg(0)) / 2)
+               .attr("y", (d) => y(d.id) )
+               .attr("dy", "1em");
+
+    // bars
+    bar = bar.data([]);
+    bar.exit()
+       .transition()
+       .duration(animation_out_duration)
+       .attr("x", (d) => x_start_before_animation(d.logFC) )
+       .attr("width", 0)
+       .remove();
+
+    bar = bar.data(data).enter()
+             .append("rect")
+             .attr("class", (d) => "bar bar--" + (d.logFC < 0 ? "negative" : "positive") )
+             .attr("y", (d) => y(d.id) )
+             .attr("height", bar_thickness)
+             .attr("x", (d) => x_start_before_animation(d.logFC) )
+             .attr("width", 0)
+             .style("fill", (d) => color(d.logFC));
+    bar.transition()
+       .duration(animation_in_duration)
+       .attr("x", (d) => x_start(d.logFC) )
+       .attr("width", (d) => x_width(d.logFC) );
+
+    // grid lines
+    pos_grid = pos_grid.tickSize(-y_max);
+
+    grid_right.remove();
+
+    grid_right = g.append("g")
+                 .attr("class", "grid")
+                 .style("stroke", "#ddd")
+                 .style("opacity", 0.1)
+                 .call(pos_grid);
+
+
+}
+
+
+/////////////////////////////////////////////////////////////////////////////
+                      ///////   Zoom & Resize    ///////
+/////////////////////////////////////////////////////////////////////////////
+
+
+svg.call(d3.zoom()
+           .scaleExtent([1 / 8, 8])
+           .on("zoom", zoomed));
+
+function zoomed() { g.attr("transform", d3.event.transform); }
+
+
+
+function resize() {
+    svg.attr("width", window.innerWidth).attr("height", window.innerHeight);
+    w = window.innerWidth - (margin.left + margin.right);
+    h = window.innerHeight - (margin.top + margin.bottom);
+}
+
+d3.select(window).on("resize", resize)
+
+resize();
+
+
+/////////////////////////////////////////////////////////////////////////////
+                 ///////    Download SVG    ///////
+/////////////////////////////////////////////////////////////////////////////
+
+
+d3.select("#download").on("click", function() {
+
+    d3.select(this)
+      .attr("href", 'data:application/octet-stream;base64,' + btoa(unescape(encodeURIComponent(d3.select("#graph-container").html()))))
+      .attr("download", "plot.svg")
+})
+
+$("#degenes").click(function() {
+
+    d3.select(this)
+      .attr("href", 'data:application/octet-stream;base64,' + btoa(_(data.filter(is_differential)).pluck('id').join("\n")))
+      .attr("download", "DE_Genes.txt")
+})
+
+$('#hide-show').click(function(e) { $('.go-picker').toggleClass('hidden'); });
+
+
+/////////////////////////////////////////////////////////////////////////////
+             ///////    Select Gene Set / Thresholds   ///////
+/////////////////////////////////////////////////////////////////////////////
+
+var chooseGO = document.getElementById("chooseGO");
+var chooseGOform = new Awesomplete(chooseGO, {
+    list: Object.entries(go),
+    maxItems: 30,
+    replace: function (text) { this.input.value = text.label; }
+});
+
+var choosePathway = document.getElementById("choosePathway");
+var form = new Awesomplete(choosePathway, {
+    list: Object.entries(msigdb),
+    maxItems: 30,
+    replace: function (text) { this.input.value = text.label; }
+});
+
+document.addEventListener('awesomplete-selectcomplete', function(e) {
+    selected_gene_set_name = e.text.label;
+    selected_genes = e.text.value;
+    restart(selected_gene_set_name, selected_genes);
+});
+
+
+$("#q_threshold").change(function() {
+    q_threshold = parseFloat(this.value);
+    restart();
+});
+
+
+$("#fc_threshold").change(function() {
+    fc_threshold = parseFloat(this.value);
+    restart();
+});
+
+    </script>
+
+</body>
+
+</html>

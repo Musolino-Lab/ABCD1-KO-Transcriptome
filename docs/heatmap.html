@@ -115,46 +115,107 @@ function isNumber(n) {
                       ///////    Variables    ///////
 /////////////////////////////////////////////////////////////////////////////
 
-var human = d3.json('human_counts.json')
-
-var data = Object.entries(human).map(entry => Object.assign({'id':entry[0]}, entry[1]))
-                                .filter(entry => entry['logFC'] != null && entry['q'] != null);
-
-
-
-// var margin = {top: 100, right: 0, bottom: 0, left: 0};
-//
-// var w = window.innerWidth - (margin.left + margin.right);
-// var h = window.innerHeight - (margin.top + margin.bottom);
+var patient_from_col = [];
+var gene_from_row = [];
+var col_from_patient = {};
+var row_from_gene = {};
+var data = [];
 
 var w = window.innerWidth;
 var h = window.innerHeight;
 
+var low_color = "blue";
+var center_color = "black";
+var high_color = "red";
+
+var cell_height = 1;
+
+var canvas = d3.select('#graph-container').append('canvas').attr('width', w).attr('height', h);
+canvas.on("wheel.zoom", pan);
+
+var context = canvas.node().getContext('2d');
+
+var detachedContainer = document.createElement("custom");
+var dataContainer = d3.select(detachedContainer);
+
+var currentTransform = d3.zoomIdentity;
 
 
 /////////////////////////////////////////////////////////////////////////////
-                      ///////    Set Up Chart    ///////
+                      ///////    Bind Data    ///////
 /////////////////////////////////////////////////////////////////////////////
 
-var svg = d3.select("#graph-container").append("svg").attr("xmlns", "http://www.w3.org/2000/svg").attr("xmlns:xlink", "http://www.w3.org/1999/xlink");
-var g = svg.append("g"); //.attr("transform", "translate("+margin.left+","+margin.top+")");
-svg.style("cursor", "move");
+d3.json('human_counts.json', function(human_counts) {
 
-var bar  = g.selectAll(".bar");
-var text = g.selectAll(".text");
-var title = g.selectAll(".title");
+    patient_from_col = Object.keys(human_counts);
+    num_patients = patient_from_col.length;
+    gene_from_row = Object.keys(human_counts[patient_from_col[0]]);
+    num_genes = gene_from_row.length;
+
+    col_from_patient = _.object(patient_from_col, _.range(num_patients));
+    row_from_gene =  _.object(gene_from_row, _.range(num_genes));
+
+    data = _.chain(human_counts)
+             .mapObject((genes, patient) =>
+                _.chain(genes).mapObject((value, gene) => {return {
+                     'patient_index': col_from_patient[patient],
+                     'gene_index': row_from_gene[gene],
+                     'count': value,
+                }}).values().value())
+            .values().flatten().value();
+            // .filter(not_null);
+
+
+    [c_min, c_max] = d3.extent(data, d => d.count);
+    var color = d3.scaleLinear().domain([0, c_max])
+                            .range([center_color, high_color]);
+
+    var x = d3.scaleLinear().domain([0, num_patients]).range([0, w/2]);
+    var y = d3.scaleLinear().domain([0, num_genes]).range([0, num_genes * cell_height * 3]);
+
+
+    var rect = dataContainer.selectAll('custom.rect');
+
+    rect = rect.data(data)
+        .enter()
+        .append('custom')
+        .attr('class', 'rect')
+        .attr('x', d => x(d.patient_index))
+        .attr('y', d => y(d.gene_index))
+        .attr('width', d => 100)
+        .attr('height', d => cell_height)
+        .attr('fillStyle', d => color(d.count) );
+
+    drawCanvas();
+
+});
+
 
 
 
 /////////////////////////////////////////////////////////////////////////////
-                      ///////    Re-Draw Chart    ///////
+                      ///////    Draw Chart    ///////
 /////////////////////////////////////////////////////////////////////////////
 
-function restart() {
+function drawCanvas() {
 
+    context.clearRect(0, 0, w, h);
+    context.fillStyle = '#fff';
+    context.fillRect(0, 0, w, h);
+
+    dataContainer.selectAll('custom.rect').each(function(d, i) {
+        var node = d3.select(this);
+
+        context.beginPath();
+        context.fillStyle = node.attr("fillStyle");
+        context.rect(node.attr("x"), node.attr("y"), node.attr("width"), node.attr("height"));
+        context.fill();
+        context.closePath();
+    });
+
+    console.log('drawCanvas');
 
 }
-
 
 
 /////////////////////////////////////////////////////////////////////////////
@@ -162,25 +223,30 @@ function restart() {
 /////////////////////////////////////////////////////////////////////////////
 
 
-svg.call(d3.zoom()
-           .scaleExtent([1 / 8, 8])
-           .on("zoom", zoomed));
 
-function zoomed() { g.attr("transform", d3.event.transform); }
+// function zoomed() {
+//     console.log('zoomed');
+//     context.save();
+//     context.clearRect(0, 0, w, h);
+//     currentTransform = d3.event.transform;
+//     context.translate(currentTransform.x, currentTransform.y);
+//     context.scale(currentTransform.k, currentTransform.k);
+//     drawCanvas();
+//     context.restore();
+// }
 
-
-
-function resize() {
-    svg.attr("width", window.innerWidth).attr("height", window.innerHeight);
-    // w = window.innerWidth - (margin.left + margin.right);
-    // h = window.innerHeight - (margin.top + margin.bottom);
-    w = window.innerWidth;
-    h = window.innerHeight;
+function pan() {
+    console.log('pan');
+    context.save();
+    context.clearRect(0, 0, w, h);
+    console.log(d3.event.wheelDeltaX, d3.event.wheelDeltaY);
+    // currentTransform.x += d3.event.wheelDeltaX;
+    currentTransform.y += d3.event.wheelDeltaY;
+    context.translate(0, currentTransform.y);
+    // context.translate(currentTransform.x, currentTransform.y);
+    drawCanvas();
+    context.restore();
 }
-
-d3.select(window).on("resize", resize)
-
-resize();
 
 
 /////////////////////////////////////////////////////////////////////////////
@@ -188,12 +254,12 @@ resize();
 /////////////////////////////////////////////////////////////////////////////
 
 
-d3.select("#download").on("click", function() {
+// d3.select("#download").on("click", function() {
 
-    d3.select(this)
-      .attr("href", 'data:application/octet-stream;base64,' + btoa(unescape(encodeURIComponent(d3.select("#graph-container").html()))))
-      .attr("download", "plot.svg")
-})
+//     d3.select(this)
+//       .attr("href", 'data:application/octet-stream;base64,' + btoa(unescape(encodeURIComponent(d3.select("#graph-container").html()))))
+//       .attr("download", "plot.svg")
+// })
 
 $('#hide-show').click(function(e) { $('.go-picker').toggleClass('hidden'); });
 
