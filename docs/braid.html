@@ -248,11 +248,11 @@ chooseGeneSet.addEventListener('awesomplete-selectcomplete', function(e) {
     braid.restart({'selected_gene_set_name':selected_gene_set_name, 'selected_genes':selected_genes});
 });
 
-maybeRestart_debounced = _.debounce(maybeRestart, 1000)
+maybeRestart_debounced = _.debounce(maybeRestart, 400)
 chooseGenes.on('keyup', function (e) { maybeRestart_debounced($(this).text()) });
 
 function maybeRestart(text) {
-    text.split(/[\s,;\t\n]+/).filter(n => n);
+    console.log(text.split(/[\s,;\t\n]+/).filter(n => n));
 
 }
 

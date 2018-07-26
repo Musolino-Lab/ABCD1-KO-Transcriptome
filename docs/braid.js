@@ -106,7 +106,7 @@ function Braid(samples_by_genes_matrix, gene_sets, classes) {
     }
 
     var line_from_sample = d3.line()
-                              .y((d) => y(d.gene))
+                              .y((d, i) => y(i))
                               .x((d) => x_scales[d.gene](d.count))
                               .curve(curves[curve]);
 
@@ -132,13 +132,14 @@ function Braid(samples_by_genes_matrix, gene_sets, classes) {
     var genes_pc1 = [];
     var samples_pc1 = [];
 
-    var y;
-    var y_axis;
     var x_scales;
-    var axes = g.selectAll(".axis-x");
     var title = g.selectAll(".title");
+    var text = g.selectAll(".text");
+    var axes = g.selectAll(".axis-x");
     var dots = g.selectAll(".dots");
-    var lines = g.selectAll(".line");
+    var line = g.selectAll(".line");
+    var halo = g.selectAll(".halo");
+
 
     /////////////////////////////////////////////////////////////////////////////
                           ///////    Re-Draw Chart    ///////
@@ -260,20 +261,35 @@ function Braid(samples_by_genes_matrix, gene_sets, classes) {
     function render() {
 
         title = g.selectAll(".title");
+        text = g.selectAll(".text");
         axes = g.selectAll(".axis-x");
         dots = g.selectAll(".dots");
         line = g.selectAll(".line");
         halo = g.selectAll(".halo");
 
-        // scale for all genes
-        y = d3.scalePoint().domain(gene_wise.map(o => o.gene)).range([0,gene_spacing*genes.length]);
+        y = (index) => gene_spacing*index;
 
-        d3.selectAll(".axis-y").remove();
-        y_axis = g.append("g").attr("class", "axis axis-y").call(d3.axisLeft(y));
+        // gene symbols
+        text = text.data([]);
+        text.exit().remove();
+        text = text.data(gene_wise);
+        text = text.enter()
+                   .append("a")
+                   .attr("class", "text")
+                   .attr("xlink:href", (d) => "http://www.genecards.org/cgi-bin/carddisp.pl?gene="+d.gene)
+                   .style("cursor", "pointer")
+                       .append("text")
+                       .attr("font-family", "sans-serif")
+                       .text((d) => d.gene)
+                       .style("text-anchor", "middle")
+                       .attr("x", 0) // (x_pos(0) + x_neg(0)) / 2)
+                       .attr("y", (d, i) => y(i))
+                       .attr("dy", "1em");
+
 
         // scale for each gene
         x_scales = _.object(gene_wise.map((obj) =>
-            [obj.gene, d3.scaleLinear().domain([0, d3.max([obj.mean*2, 10])]).range([0,h]).nice()]
+            [obj.gene, d3.scaleLinear().domain([0, d3.max([obj.mean*2, 10])]).range([50,h]).nice()]
         ));
 
         axes = axes.data([]);
@@ -282,7 +298,7 @@ function Braid(samples_by_genes_matrix, gene_sets, classes) {
                    .enter()
                    .append("g")
                    .attr("class", "axis axis-x")
-                   .attr("transform", (d) => "translate(0," + y(d[0]) + ")")
+                   .attr("transform", (d, i) => "translate(0," + y(i) + ")")
                    .each(function (d) { d3.select(this).call(d3.axisBottom(d[1])) });
 
         line = line.data([]);
@@ -300,11 +316,11 @@ function Braid(samples_by_genes_matrix, gene_sets, classes) {
                    .append("g")
                    .attr("class", "dots")
                    .selectAll(".dot")
-                       .data((d) => d.samples)
+                       .data((d, i) => d.samples.map((sample) => Object.assign({'i':i}, sample)))
                        .enter()
                        .append("circle")
                        .attr("class", "dot")
-                       .attr("cy", (d) => y(d.gene) )
+                       .attr("cy", (d) => y(d.i) )
                        .attr("cx", (d) => x_scales[d.gene](d.count) );
 
         halo = halo.data([]);
