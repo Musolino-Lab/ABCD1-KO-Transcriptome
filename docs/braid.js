@@ -47,7 +47,7 @@ function Braid(samples_by_genes_matrix, gene_sets, classes) {
     var middle_color = '#c0c0c0';
     var positive_color = '#cc0000';
     var curve = 'linear';
-    var halo_opacity = 0.2;
+    var halo_opacity = 0.1;
 
 
     var absolute_axis = true;
@@ -59,7 +59,8 @@ function Braid(samples_by_genes_matrix, gene_sets, classes) {
     var point_radius = 3;
     var gene_spacing = 50;
 
-
+    var animation_out = d3.transition().duration(700);
+    var animation_in = d3.transition().duration(700);
 
     var colors20 = ["#3366cc", "#dc3912", "#ff9900", "#109618", "#990099", "#0099c6", "#dd4477",
                     "#66aa00", "#b82e2e", "#316395", "#994499", "#22aa99", "#aaaa11", "#6633cc",
@@ -133,16 +134,27 @@ function Braid(samples_by_genes_matrix, gene_sets, classes) {
     var samples_pc1 = [];
 
     var x_scales;
-    var title = g.selectAll(".title");
+    var y = (index) => gene_spacing*index;
+
+    function idFunc(d) { return d ? d.id : this.id; }
+
     var text = g.selectAll(".text");
     var axes = g.selectAll(".axis-x");
     var dots = g.selectAll(".dots");
     var line = g.selectAll(".line");
     var halo = g.selectAll(".halo");
 
+    var title = g.append("text")
+                 .attr("class", "title")
+                 .attr("font-family", "sans-serif")
+                 .text("")
+                 .style("text-anchor", "middle")
+                 .attr("x", 0)
+                 .attr("y", 0)
+                 .attr("dy", "-3em");
 
     /////////////////////////////////////////////////////////////////////////////
-                          ///////    Re-Draw Chart    ///////
+                          ///////    Methods    ///////
     /////////////////////////////////////////////////////////////////////////////
 
     function restart({selected_gene_set_name=gene_set_name,
@@ -205,12 +217,8 @@ function Braid(samples_by_genes_matrix, gene_sets, classes) {
 
         all_zero_genes = _(gene_wise.filter(gene => gene.all_zero)).pluck('gene');
 
-        permutation_order = order();
-
-        return {
-            'gene_wise'   : gene_wise,
-            'permutation_order': permutation_order,
-        }
+        order();
+        render();
 
     }
 
@@ -252,100 +260,92 @@ function Braid(samples_by_genes_matrix, gene_sets, classes) {
         _(_.zip(sample_wise, samples_pc1)).each(([sample, pc1]) => { sample.pc1 = pc1; });
         samples_pc1_domain = d3.extent(samples_pc1);
 
-        render();
-
-        return permutation_order;
+        x_scales = _.object(gene_wise.map((obj) =>
+            [obj.gene, d3.scaleLinear().domain([0, d3.max([obj.mean*2, 10])]).range([50,h]).nice()]
+        ));
 
     }
 
     function render() {
 
-        title = g.selectAll(".title");
-        text = g.selectAll(".text");
-        axes = g.selectAll(".axis-x");
-        dots = g.selectAll(".dots");
-        line = g.selectAll(".line");
-        halo = g.selectAll(".halo");
+        title.text(gene_set_name);
 
-        y = (index) => gene_spacing*index;
+        text = g.selectAll(".text").data(gene_wise, idFunc);
+        text.exit()
+            .transition(animation_out)
+            .attr("opacity", 0)
+            .remove();
+        text.enter()
+            .append("a")
+            .attr("class", "text")
+            .attr("id", d => d.id)
+            .merge(text)
+            .attr("xlink:href", (d) => "http://www.genecards.org/cgi-bin/carddisp.pl?gene="+d.gene)
+            .style("cursor", "pointer")
+            .attr("font-family", "sans-serif")
+                .append("text")
+                .text((d) => d.gene)
+                .style("text-anchor", "middle")
+                .attr("x", 0) // (x_pos(0) + x_neg(0)) / 2)
+                .attr("y", (d, i) => y(i))
+                .attr("dy", "1em");
 
-        // gene symbols
-        text = text.data([]);
-        text.exit().remove();
-        text = text.data(gene_wise);
-        text = text.enter()
-                   .append("a")
-                   .attr("class", "text")
-                   .attr("xlink:href", (d) => "http://www.genecards.org/cgi-bin/carddisp.pl?gene="+d.gene)
-                   .style("cursor", "pointer")
-                       .append("text")
-                       .attr("font-family", "sans-serif")
-                       .text((d) => d.gene)
-                       .style("text-anchor", "middle")
-                       .attr("x", 0) // (x_pos(0) + x_neg(0)) / 2)
-                       .attr("y", (d, i) => y(i))
-                       .attr("dy", "1em");
+        axes = g.selectAll(".axis-x").data(Object.entries(x_scales), idFunc);
+        axes.exit()
+            .transition(animation_out)
+            .attr("opacity", 0)
+            .remove();
+        axes.enter()
+            .append("g")
+            .attr("class", "axis axis-x")
+            .attr("id", d => d.id)
+            .attr("transform", (d, i) => "translate(0," + y(i) + ")")
+            .each(function (d) { d3.select(this).call(d3.axisBottom(d[1])) })
+            .merge(axes);
+            // .on("click", (d) => style({'lines_color_by_':this.id}))
 
+        line = g.selectAll(".line").data(sample_wise, idFunc);
+        line.exit()
+            .transition(animation_out)
+            .attr("opacity", 0)
+            .remove();
+        line.enter()
+            .append("path")
+            .attr("class", "line")
+            .attr("id", d => d.id)
+            .style("fill", "none");
 
-        // scale for each gene
-        x_scales = _.object(gene_wise.map((obj) =>
-            [obj.gene, d3.scaleLinear().domain([0, d3.max([obj.mean*2, 10])]).range([50,h]).nice()]
-        ));
-
-        axes = axes.data([]);
-        axes.exit().remove();  // can have a cute transition here
-        axes = axes.data(Object.entries(x_scales))
-                   .enter()
-                   .append("g")
-                   .attr("class", "axis axis-x")
-                   .attr("transform", (d, i) => "translate(0," + y(i) + ")")
-                   .each(function (d) { d3.select(this).call(d3.axisBottom(d[1])) });
-
-        line = line.data([]);
-        line.exit().remove();
-        line = line.data(sample_wise)
-                     .enter()
-                     .append("path")
-                     .attr("class", "line")
-                     .style("fill", "none");
-
-        dots = dots.data([]);
+        dots = g.selectAll(".dots").data(gene_wise, idFunc);
         dots.exit().remove();
-        dots = dots.data(gene_wise)
-                   .enter()
-                   .append("g")
-                   .attr("class", "dots")
-                   .selectAll(".dot")
-                       .data((d, i) => d.samples.map((sample) => Object.assign({'i':i}, sample)))
-                       .enter()
-                       .append("circle")
-                       .attr("class", "dot")
-                       .attr("cy", (d) => y(d.i) )
-                       .attr("cx", (d) => x_scales[d.gene](d.count) );
+        dots = dots.enter()
+            .append("g")
+            .attr("class", "dots")
+            .attr("id", d => d.id)
+            .merge(dots);
 
-        halo = halo.data([]);
-        halo.exit().remove();
-        halo = halo.data(sample_wise)
-                     .enter()
-                     .append("path")
-                     .attr("class", "halo")
-                     .style("fill", "none")
-                     .style("stroke-width", 20)
-                     .style("stroke-linecap", "round")
-                     .style("stroke-linejoin", "round");
+        dot = dots.selectAll(".dot")
+                  .data((d, i) => d.samples.map((sample) => Object.assign({'i':i}, sample)), idFunc);
+        dot.enter()
+           .append("circle")
+           .attr("class", "dot")
+           .attr("id", d => d.id)
+           .merge(dot)
+           .attr("cy", (d) => y(d.i) )
+           .attr("cx", (d) => x_scales[d.gene](d.count) );
 
-        title = title.data([]);
-        title.exit().remove();
-        title = title.data([gene_set_name])
-                     .enter()
-                     .append("text")
-                     .attr("font-family", "sans-serif")
-                     .attr("class", "title")
-                     .text(gene_set_name)
-                     .style("text-anchor", "middle")
-                     .attr("x", 0)
-                     .attr("y", 0)
-                     .attr("dy", "-3em");
+        halo = g.selectAll(".halo").data(sample_wise, idFunc);
+        halo.exit()
+            .transition(animation_out)
+            .attr("opacity", 0)
+            .remove();
+        halo.enter()
+            .append("path")
+            .attr("class", "halo")
+            .attr("id", d => d.id)
+            .style("fill", "none")
+            .style("stroke-width", 20)
+            .style("stroke-linecap", "round")
+            .style("stroke-linejoin", "round");
 
         style();
 
@@ -393,7 +393,7 @@ function Braid(samples_by_genes_matrix, gene_sets, classes) {
         }
 
         // dots are bound to gene_wise.samples
-        svg.selectAll(".dot")
+        g.selectAll(".dot")
             .attr("visibility", show_points ? "visible" : "hidden")
             .attr("r", point_radius)
             .style("fill", (d) => point_colors[point_coloring_system](d));
@@ -401,14 +401,14 @@ function Braid(samples_by_genes_matrix, gene_sets, classes) {
 
 
         // lines are bound to sample_wise
-        line.attr("visibility", show_lines ? "visible" : "hidden")
+        g.selectAll(".line").attr("visibility", show_lines ? "visible" : "hidden")
             .attr("d", (d) => line_from_sample.curve(curves[curve])(d.genes))
             .style("stroke", (d) => line_colors[line_coloring_system](d));
              // .style("stroke-width", );
              // .style("stroke-opacity", );
 
         // halos are bound to sample_wise
-        halo.attr("visibility", show_halos ? "visible" : "hidden")
+        g.selectAll(".halo").attr("visibility", show_halos ? "visible" : "hidden")
             .attr("d", (d) => line_from_sample.curve(curves[curve])(d.genes))
             .style("stroke", (d) => line_colors[line_coloring_system](d))
             .style("stroke-opacity", halo_opacity);

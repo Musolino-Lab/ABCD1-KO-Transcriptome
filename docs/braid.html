@@ -189,7 +189,7 @@
                             <br>
                             <div>
                                 <label for="halo_opacity">Halo Opacity</label>
-                                <input type="range" id="halo_opacity" name="" min="0" max="1" step="0.01" value="0.2" style="position: relative; top: 3px;">
+                                <input type="range" id="halo_opacity" name="" min="0" max="0.6" step="0.01" value="0.1" style="position: relative; top: 3px;">
                             </div>
 
                         </div>
@@ -260,9 +260,9 @@ function maybeRestart(text) {
                  ///////    Style Figure    ///////
 /////////////////////////////////////////////////////////////////////////////
 
-$("#values input:radio").change(                function () { braid.order({'values_': this.value}) });
-$("#sorting input:radio").change(               function () { braid.order({'sorting_': this.value}) });
-$("#show_all_zero").change(                     function () { braid.order({'show_all_zero_': this .checked}) });
+$("#values input:radio").change(                function () { braid.order({'values_': this.value}); braid.render() });
+$("#sorting input:radio").change(               function () { braid.order({'sorting_': this.value}); braid.render() });
+$("#show_all_zero").change(                     function () { braid.order({'show_all_zero_': this .checked}); braid.render() });
 
 $("#show_points").change(                       function () { braid.style({'show_points_': this.checked}) });
 $("#radius").change(                            function () { braid.style({'point_radius_': parseFloat(this.value)}) });
