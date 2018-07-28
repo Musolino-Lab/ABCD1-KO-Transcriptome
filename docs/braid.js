@@ -31,10 +31,22 @@ function Braid(samples_by_genes_matrix, gene_sets, classes) {
     var h = window.innerHeight - (margin.top + margin.bottom);
 
     var values = 'counts';
+    var scaling = 'mean';
     var sorting = 'complete';
     var show_all_zero = true;
 
+    var scalings = {
+        max: (obj) => obj.max * 1.5,
+        mean: (obj) => obj.mean * 2,
+    };
+
+    var sortings = {
+        complete: null,
+        pc1: null,
+    };
+
     var show_points = true;
+    var point_radius = 3;
     var point_coloring_system = 'identity';
     var points_color_by = categories[0];
     var default_point_color = '#333333';
@@ -50,14 +62,8 @@ function Braid(samples_by_genes_matrix, gene_sets, classes) {
     var halo_opacity = 0.1;
 
 
-    var absolute_axis = true;
-    var relative_axis = false;
-    var margin_between_axes = 10;
-
-    var line_bendiness = 0.5;
-
-    var point_radius = 3;
     var gene_spacing = 50;
+    var max_point_radius = 20;
 
     var animation_out = d3.transition().duration(700);
     var animation_in = d3.transition().duration(700);
@@ -66,11 +72,9 @@ function Braid(samples_by_genes_matrix, gene_sets, classes) {
                     "#66aa00", "#b82e2e", "#316395", "#994499", "#22aa99", "#aaaa11", "#6633cc",
                     "#e67300", "#8b0707", "#651067", "#329262", "#5574a6", "#3b3eac"];
 
-    var scalings = {
-        max: (obj) => obj.max * 1.5,
-        mean: (obj) => obj.mean * 2,
-    };
 
+
+    var line_bendiness = 0.5;
     var curves = {
         'linear'   : d3.curveLinear,
         'natural'  : d3.curveNatural,
@@ -260,84 +264,116 @@ function Braid(samples_by_genes_matrix, gene_sets, classes) {
         _(_.zip(sample_wise, samples_pc1)).each(([sample, pc1]) => { sample.pc1 = pc1; });
         samples_pc1_domain = d3.extent(samples_pc1);
 
+    }
+
+    function render({scaling_=scaling}={}) {
+
+        console.log('render()');
+
         x_scales = _.object(gene_wise.map((obj) =>
             [obj.gene, d3.scaleLinear().domain([0, d3.max([obj.mean*2, 10])]).range([50,h]).nice()]
         ));
 
-    }
-
-    function render() {
-
         title.text(gene_set_name);
 
         text = g.selectAll(".text").data(gene_wise, idFunc);
-        text.exit()
-            .transition(animation_out)
-            .attr("opacity", 0)
-            .remove();
+        axes = g.selectAll(".axis-x").data(Object.entries(x_scales), function(d) { return d ? d[0] : this.id; });
+        dots = g.selectAll(".dots").data(gene_wise, idFunc);
+        line = g.selectAll(".line").data(sample_wise);
+        halo = g.selectAll(".halo").data(sample_wise);
+
+        // phase 1
+            // lines and halos disappear
+        t_last = d3.transition().duration(700);
+        if (line.enter().size() === 0) {  // if lines are already drawn,
+            line.transition(t_last).attr("stroke-opacity", 0);
+            halo.transition(t_last).attr("stroke-opacity", 0);
+            t_last = t_last.transition().duration(700);
+        }
+        // phase 2
+            // old axes collapse to 0
+            // old gene symbols lose opacity
+            // rows of dots corresponding to old genes disappear
+        if (text.exit().size() > 0) {
+            text.exit().transition(t_last).attr("opacity", 0).remove();
+            axes.exit().transition(t_last).attr("opacity", 0).remove();
+            dots.exit().transition(t_last).attr("opacity", 0).remove();
+            t_last = t_last.transition().duration(700);
+        }
+
+        // phase 3
+            // axes which are staying get re-arranged
+            // gene symbols which are staying get re-arranged
+            // dots which are staying get re-arranged
+        if (text.size() > 0) {
+            axes.transition(t_last).attr("transform", (d, i) => "translate(0," + y(i) + ")")
+            dots.transition(t_last).attr("y", (d, i) => y(i))
+            text.transition(t_last).attr("y", (d, i) => y(i))
+            t_last = t_last.transition().duration(700);
+        }
+
+        // phase 4
+            // new gene symbol names fade in
+            // new axes roll out
         text.enter()
-            .append("a")
+            .append("text")
             .attr("class", "text")
             .attr("id", d => d.id)
-            .merge(text)
-            .attr("xlink:href", (d) => "http://www.genecards.org/cgi-bin/carddisp.pl?gene="+d.gene)
-            .style("cursor", "pointer")
+            .text((d) => d.gene)
             .attr("font-family", "sans-serif")
-                .append("text")
-                .text((d) => d.gene)
-                .style("text-anchor", "middle")
-                .attr("x", 0) // (x_pos(0) + x_neg(0)) / 2)
-                .attr("y", (d, i) => y(i))
-                .attr("dy", "1em");
+            .style("cursor", "pointer")
+            .style("text-anchor", "middle")
+            .attr("x", 0) // (x_pos(0) + x_neg(0)) / 2)
+            .attr("y", (d, i) => y(i))
+            .attr("dy", "1em")
+            .style("opacity", 0).transition(t_last).style("opacity", 1);
 
-        axes = g.selectAll(".axis-x").data(Object.entries(x_scales), idFunc);
-        axes.exit()
-            .transition(animation_out)
-            .attr("opacity", 0)
-            .remove();
         axes.enter()
             .append("g")
             .attr("class", "axis axis-x")
-            .attr("id", d => d.id)
+            .attr("id", d => d[0])
             .attr("transform", (d, i) => "translate(0," + y(i) + ")")
             .each(function (d) { d3.select(this).call(d3.axisBottom(d[1])) })
-            .merge(axes);
+            .style("opacity", 0).transition(t_last).style("opacity", 1);
             // .on("click", (d) => style({'lines_color_by_':this.id}))
 
-        line = g.selectAll(".line").data(sample_wise, idFunc);
-        line.exit()
-            .transition(animation_out)
-            .attr("opacity", 0)
-            .remove();
+        dots.enter()
+            .append("svg")
+            .attr("class", "dots")
+            .attr("id", d => d.id)
+            .attr("y", (d, i) => y(i) - max_point_radius)
+                .selectAll(".dot")
+                .data((d) => d.samples, idFunc)
+                .enter()
+                .append("circle")
+                .attr("class", "dot")
+                .attr("id", d => d.id)
+                .attr("cy", max_point_radius)
+                .attr("cx", (d) => x_scales[d.gene](d.count) )
+                .attr("visibility", show_points ? "visible" : "hidden")
+                .style("opacity", 0)
+                .attr("r", point_radius)
+                .style("fill", (d) => point_colors[point_coloring_system](d))
+                .transition(t_last)
+                    .style("opacity", 1);
+
+        // phase 5
+            // new lines and halos appear
+        t_last = t_last.transition().duration(700);
+
         line.enter()
             .append("path")
             .attr("class", "line")
             .attr("id", d => d.id)
-            .style("fill", "none");
+            .style("fill", "none")
+            .merge(line)
+            .style("stroke-opacity", 0)
+            .attr("visibility", show_lines ? "visible" : "hidden")
+            .attr("d", (d) => line_from_sample.curve(curves[curve])(d.genes))
+            .style("stroke", (d) => line_colors[line_coloring_system](d))
+            .transition(t_last)
+                .style("stroke-opacity", 1);
 
-        dots = g.selectAll(".dots").data(gene_wise, idFunc);
-        dots.exit().remove();
-        dots = dots.enter()
-            .append("g")
-            .attr("class", "dots")
-            .attr("id", d => d.id)
-            .merge(dots);
-
-        dot = dots.selectAll(".dot")
-                  .data((d, i) => d.samples.map((sample) => Object.assign({'i':i}, sample)), idFunc);
-        dot.enter()
-           .append("circle")
-           .attr("class", "dot")
-           .attr("id", d => d.id)
-           .merge(dot)
-           .attr("cy", (d) => y(d.i) )
-           .attr("cx", (d) => x_scales[d.gene](d.count) );
-
-        halo = g.selectAll(".halo").data(sample_wise, idFunc);
-        halo.exit()
-            .transition(animation_out)
-            .attr("opacity", 0)
-            .remove();
         halo.enter()
             .append("path")
             .attr("class", "halo")
@@ -345,9 +381,14 @@ function Braid(samples_by_genes_matrix, gene_sets, classes) {
             .style("fill", "none")
             .style("stroke-width", 20)
             .style("stroke-linecap", "round")
-            .style("stroke-linejoin", "round");
-
-        style();
+            .style("stroke-linejoin", "round")
+            .merge(halo)
+            .attr("visibility", show_halos ? "visible" : "hidden")
+            .style("stroke-opacity", 0)
+            .attr("d", (d) => line_from_sample.curve(curves[curve])(d.genes))
+            .style("stroke", (d) => line_colors[line_coloring_system](d))
+            .transition(t_last)
+                .style("stroke-opacity", halo_opacity);
 
     }
 
@@ -392,6 +433,8 @@ function Braid(samples_by_genes_matrix, gene_sets, classes) {
             pc1_colors = d3.scaleLinear().domain(samples_pc1_domain).range([negative_color, positive_color]);
         }
 
+        console.log("style()");
+
         // dots are bound to gene_wise.samples
         g.selectAll(".dot")
             .attr("visibility", show_points ? "visible" : "hidden")
@@ -399,19 +442,20 @@ function Braid(samples_by_genes_matrix, gene_sets, classes) {
             .style("fill", (d) => point_colors[point_coloring_system](d));
             // .style("opacity", );
 
-
         // lines are bound to sample_wise
-        g.selectAll(".line").attr("visibility", show_lines ? "visible" : "hidden")
-            .attr("d", (d) => line_from_sample.curve(curves[curve])(d.genes))
-            .style("stroke", (d) => line_colors[line_coloring_system](d));
-             // .style("stroke-width", );
-             // .style("stroke-opacity", );
-
-        // halos are bound to sample_wise
-        g.selectAll(".halo").attr("visibility", show_halos ? "visible" : "hidden")
+        g.selectAll(".line")
+            .attr("visibility", show_lines ? "visible" : "hidden")
             .attr("d", (d) => line_from_sample.curve(curves[curve])(d.genes))
             .style("stroke", (d) => line_colors[line_coloring_system](d))
-            .style("stroke-opacity", halo_opacity);
+            .style("stroke-opacity", 1);
+             // .style("stroke-width", );
+
+        // halos are bound to sample_wise
+        g.selectAll(".halo")
+            .attr("visibility", show_halos ? "visible" : "hidden")
+            .attr("d", (d) => line_from_sample.curve(curves[curve])(d.genes))
+            .style("stroke", (d) => line_colors[line_coloring_system](d))
+            .style("stroke-opacity", halo_opacity)
 
     }
 
