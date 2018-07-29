@@ -70,10 +70,6 @@
             display: block; /* For Firefox */
         }
 
-
-
-
-
     </style>
 
     <title>ABCD1-knockout transcriptome</title>
@@ -118,7 +114,13 @@
 
 
                         <div class="tab-pane card-body fade" id="structure" role="tabpanel">
-                            <div><input type="checkbox" id="show_all_zero" value="show_all_zero" checked><label> Show Genes for which all samples have 0.</label></div>
+                            <div><input type="checkbox" id="reordering" value="reordering" checked><label> Reset Gene Order on each change. </label></div>
+
+                            <br>
+                            <div>
+                                <label style="display: inline" for="minimum_nonzero">Only Show a Gene if at least <span id="X">0</span> samples have a non-zero value.</label>
+                                <input type="range" id="minimum_nonzero" name="" min="0" max="10" step="1" value="0" style="position: relative; top: 3px; display: inline" onchange="$('#X').text(this.value)">
+                            </div>
 
                             <br>
                             <div id="values">
@@ -151,7 +153,7 @@
 
                             <br>
                             <div>
-                                <label for="radius">Diameter</label>
+                                <label for="radius">Radius</label>
                                 <input type="range" id="radius" name="" min="2" max="20" step="0.1" value="2" style="position: relative; top: 3px;">
                             </div>
 
@@ -233,7 +235,12 @@ else {
     });
 }
 
+$("#minimum_nonzero").attr('max', Object.keys(human).length);
+
 braid = Braid(human, gene_sets, classes);
+
+
+let equal = (a1, a2) => a1.length === a2.length && a1.every((value, i) => value === a2[i]);
 
 
 /////////////////////////////////////////////////////////////////////////////
@@ -248,30 +255,36 @@ var chooseGeneSetform = new Awesomplete(chooseGeneSet, {
 });
 
 chooseGenes = $('#chooseGenes');
+function refresh_genes() { chooseGenes.text(braid.get_sorted_gene_list().join(", ")); }
 
 chooseGeneSet.addEventListener('awesomplete-selectcomplete', function(e) {
     selected_gene_set_name = e.text.label;
     selected_genes = e.text.value;
-    chooseGenes.text(selected_genes.join(", "));
     braid.restart({'selected_gene_set_name':selected_gene_set_name, 'selected_genes':selected_genes});
+    refresh_genes();
 });
 
-maybeRestart_debounced = _.debounce(maybeRestart, 400)
-chooseGenes.on('keyup', function (e) { maybeRestart_debounced($(this).text()) });
 
-function maybeRestart(text) {
-    console.log(text.split(/[\s,;\t\n]+/).filter(n => n));
-
+function manual_gene_list_edit(e) {
+    new_list = $(this).text().split(/[\s,;\t\n]+/).filter(n => n);
+    if (!equal(new_list, braid.get_sorted_gene_list())) {
+        braid.restart({'selected_gene_set_name':'', 'selected_genes':new_list});
+        refresh_genes();
+    }
 }
+manual_gene_list_edit_debounced = _.debounce(manual_gene_list_edit, 1000)
+chooseGenes.on('input', manual_gene_list_edit_debounced);
+
 
 /////////////////////////////////////////////////////////////////////////////
                  ///////    Style Figure    ///////
 /////////////////////////////////////////////////////////////////////////////
 
-$("#values input:radio").change(                function () { braid.order({'values_': this.value}); braid.render(); });
-$("#scaling input:radio").change(               function () { braid.render({'scaling_': this.value}); });
-$("#sorting input:radio").change(               function () { braid.order({'sorting_': this.value}); braid.render(); });
-$("#show_all_zero").change(                     function () { braid.order({'show_all_zero_': this .checked}); braid.render(); });
+$("#values input:radio").change(                function () { braid.order({'values_': this.value}); braid.render(); refresh_genes(); });
+$("#scaling input:radio").change(               function () { braid.render({'scaling_': this.value}); refresh_genes(); });
+$("#sorting input:radio").change(               function () { braid.order({'sorting_': this.value}); braid.render(); refresh_genes(); });
+$("#reordering").change(                        function () { braid.set_reordering(this.checked) });
+$("#minimum_nonzero").change(                   function () { braid.order({'minimum_nonzero_': parseInt(this.value)}); braid.render(); refresh_genes(); });
 
 $("#show_points").change(                       function () { braid.style({'show_points_': this.checked}) });
 $("#radius").change(                            function () { braid.style({'point_radius_': parseFloat(this.value)}) });
