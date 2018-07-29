@@ -126,34 +126,42 @@
                             <div id="values">
                                 <label>Show Gene Values of</label>
                                 <div class="form-check"><input class="form-check-input" type="radio" name="values" value="counts" checked> Normalized Counts</div>
-                                <div class="form-check"><input class="form-check-input" type="radio" name="values" value="z_stddev"> Z-Scores (Standard Deviations)</div>
-                                <div class="form-check"><input class="form-check-input" type="radio" name="values" value="z_mad"> Z-Scores (Mean Absolute Deviation)</div>
+                                <div class="form-check"><input class="form-check-input" type="radio" name="values" value="zscore_stddev"> Z-Scores (Standard Deviations)</div>
+                                <div class="form-check"><input class="form-check-input" type="radio" name="values" value="zscore_mad"> Z-Scores (Mean Absolute Deviation)</div>
                             </div>
+
+                            <br>
+                            <div><input type="checkbox" id="show_averages" value="show_averages"> Show <select class="category"></select> averages</div>
 
                             <br>
                             <div id="scaling">
                                 <label>Show Axis Scale Preset</label>
-                                <div class="form-check"><input class="form-check-input" type="radio" name="values" value="absolute"> Absolute (no) Scaling</div>
-                                <div class="form-check"><input class="form-check-input" type="radio" name="values" value="mean" checked> 2x Gene-wise mean</div>
-                                <div class="form-check"><input class="form-check-input" type="radio" name="values" value="log"> log base 10 units</div>
+                                <div class="form-check"><input class="form-check-input" type="radio" name="scaling" value="absolute"> Absolute (no) Scaling</div>
+                                <div class="form-check"><input class="form-check-input" type="radio" name="scaling" value="mean" checked> 2x Gene-wise mean</div>
+                                <div class="form-check"><input class="form-check-input" type="radio" name="scaling" value="log"> log base 10 units</div>
                             </div>
 
                             <br>
                             <div id="sorting">
                                 <label>Sort Genes by</label>
-                                <div class="form-check"><input class="form-check-input" type="radio" name="sorting" value="complete" checked> Complete Linkage Hierarchical Clustering</div>
+                                <div class="form-check"><input class="form-check-input" type="radio" name="sorting" value="complete" checked> Complete-Linkage Hierarchical Clustering and Optimal Leaf Ordering</div>
                                 <div class="form-check"><input class="form-check-input" type="radio" name="sorting" value="pc1"> Principal Component 1 of genes in sample space</div>
                             </div>
                         </div>
 
 
                         <div class="tab-pane card-body fade" id="style" role="tabpanel">
+                            <div>
+                                <label for="radius">Axis Spacing</label>
+                                <input type="range" id="gene_spacing" name="" min="30" max="150" step="1" value="50" style="position: relative; top: 3px;">
+                            </div>
 
+                            <hr>
                             <div><input type="checkbox" id="show_points" value="show_points" checked><label> Show Points </label></div>
 
                             <br>
                             <div>
-                                <label for="radius">Radius</label>
+                                <label for="radius">Point Radius</label>
                                 <input type="range" id="radius" name="" min="2" max="20" step="0.1" value="2" style="position: relative; top: 3px;">
                             </div>
 
@@ -164,7 +172,6 @@
                                 <div class="form-check"><input class="form-check-input" type="radio" name="point_coloring_system" value="identity" checked> by Identity</div>
                                 <div class="form-check"><input class="form-check-input" type="radio" name="point_coloring_system" value="class"> by <select class="category"></select></div>
                             </div>
-
 
                             <hr>
                             <div><input type="checkbox" id="show_lines" value="show_lines" checked><label> Show Lines </label></div>
@@ -180,15 +187,14 @@
                                 <div class="form-check"><input class="form-check-input" type="radio" name="curve" value="cardinal"> Cardinal Curve</div>
                             </div>
 
-
                             <br>
                             <div id="line_coloring_system">
                                 <label>Color lines</label>
                                 <div class="form-check"><input class="form-check-input" type="radio" name="line_coloring_system" value="unform"> Uniformly <input type="color" value="#333333" id="default_line_color"></div>
                                 <div class="form-check"><input class="form-check-input" type="radio" name="line_coloring_system" value="identity" checked> by Identity</div>
                                 <div class="form-check"><input class="form-check-input" type="radio" name="line_coloring_system" value="class"> by <select class="category"></select></div>
-                                <div class="form-check"><input class="form-check-input" type="radio" name="line_coloring_system" value="z_stddev"> by Z-Score (stddev) on a single gene...</div>
-                                <div class="form-check"><input class="form-check-input" type="radio" name="line_coloring_system" value="z_mad"> by Z-Score (MAD) on a single gene...</div>
+                                <div class="form-check"><input class="form-check-input" type="radio" name="line_coloring_system" value="zscore_stddev"> by Z-Score (stddev) on a single gene...</div>
+                                <div class="form-check"><input class="form-check-input" type="radio" name="line_coloring_system" value="zscore_mad"> by Z-Score (MAD) on a single gene...</div>
                                 <div class="form-check"><input class="form-check-input" type="radio" name="line_coloring_system" value="pc1"> by Principal Component 1 of samples in gene space...</div>
                             </div>
 
@@ -197,6 +203,18 @@
 
                             <br>
                             <br>
+                            <div>
+                                <label for="line_width">Line Width</label>
+                                <input type="range" id="line_width" name="" min="0.1" max="10" step="0.1" value="1" style="position: relative; top: 3px;">
+                            </div>
+                            <div>
+                                <label for="line_opacity">Line Opacity</label>
+                                <input type="range" id="line_opacity" name="" min="0.01" max="1" step="0.01" value="1" style="position: relative; top: 3px;">
+                            </div>
+                            <div>
+                                <label for="halo_width">Halo Width</label>
+                                <input type="range" id="halo_width" name="" min="3" max="40" step="1" value="20" style="position: relative; top: 3px;">
+                            </div>
                             <div>
                                 <label for="halo_opacity">Halo Opacity</label>
                                 <input type="range" id="halo_opacity" name="" min="0" max="0.6" step="0.01" value="0.1" style="position: relative; top: 3px;">
@@ -281,11 +299,13 @@ chooseGenes.on('input', manual_gene_list_edit_debounced);
 /////////////////////////////////////////////////////////////////////////////
 
 $("#values input:radio").change(                function () { braid.order({'values_': this.value}); braid.render(); refresh_genes(); });
+$("#show_averages").change(                     function () { braid.render({'show_averages_': this.checked}); });
 $("#scaling input:radio").change(               function () { braid.render({'scaling_': this.value}); refresh_genes(); });
 $("#sorting input:radio").change(               function () { braid.order({'sorting_': this.value}); braid.render(); refresh_genes(); });
 $("#reordering").change(                        function () { braid.set_reordering(this.checked) });
 $("#minimum_nonzero").change(                   function () { braid.order({'minimum_nonzero_': parseInt(this.value)}); braid.render(); refresh_genes(); });
 
+$("#gene_spacing").change(                      function () { braid.render({'gene_spacing_': parseInt(this.value)}) });
 $("#show_points").change(                       function () { braid.style({'show_points_': this.checked}) });
 $("#radius").change(                            function () { braid.style({'point_radius_': parseFloat(this.value)}) });
 $("#point_coloring_system input:radio").change( function () { braid.style({'point_coloring_system_': this.value}) });
@@ -301,6 +321,9 @@ $("#default_line_color").change(                function () { braid.style({'defa
 $("#negative_color").change(                    function () { braid.style({'negative_color_': this.value}) });
 $("#middle_color").change(                      function () { braid.style({'middle_color_': this.value}) });
 $("#positive_color").change(                    function () { braid.style({'positive_color_': this.value}) });
+$("#line_width").change(                        function () { braid.style({'line_width_': parseFloat(this.value)}) });
+$("#line_opacity").change(                      function () { braid.style({'line_opacity_': parseFloat(this.value)}) });
+$("#halo_width").change(                        function () { braid.style({'halo_width_': parseFloat(this.value)}) });
 $("#halo_opacity").change(                      function () { braid.style({'halo_opacity_': parseFloat(this.value)}) });
 
 /////////////////////////////////////////////////////////////////////////////

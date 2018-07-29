@@ -1,7 +1,8 @@
 
 
 let range = n => [...Array(n).keys()];
-
+let round_to_power_of_10 = v => Math.pow(10, Math.ceil(Math.log10(Math.abs(v)))) * Math.pow(-1, v < 0);
+let powerOfTen = (d) => d / Math.pow(10, Math.ceil(Math.log(d) / Math.LN10 - 1e-12)) === 1;
 
 
 function Braid(samples_by_genes_matrix, gene_sets, classes) {
@@ -26,7 +27,7 @@ function Braid(samples_by_genes_matrix, gene_sets, classes) {
     );
 
     /////////////////////////////////////////////////////////////////////////////
-                          ///////    Variables    ///////
+                    ///////    Structure Variables    ///////
     /////////////////////////////////////////////////////////////////////////////
 
     var margin = {top: 100, right: 100, bottom: 0, left: 100};
@@ -35,20 +36,35 @@ function Braid(samples_by_genes_matrix, gene_sets, classes) {
     var h = window.innerHeight - (margin.top + margin.bottom);
 
     var values = 'counts';
+    var show_averages = false;
     var scaling = 'mean';
     var sorting = 'complete';
     var reordering = true;
     var minimum_nonzero = 0;
 
-    var scalings = {
-        max: (obj) => obj.max * 1.5,
-        mean: (obj) => obj.mean * 2,
+    var scale_types = {
+        mean     : () => d3.scaleLinear(),
+        absolute : () => d3.scaleLinear(),
+        log      : () => d3.scaleLog().clamp(true),  // in the future this will be a magic scale.
     };
+    var domains = {};
+    var ranges = {};
+
+    value_accessors = {
+        counts: (gene) => gene.counts,
+        zscore_stddev: (gene) => gene.samples.map((sample) => sample.zscore_stddev),
+        zscore_mad: (gene) => gene.samples.map((sample) => sample.zscore_mad),
+    }
+    value_accessor = value_accessors.counts;
 
     var sortings = {
         complete: null,
         pc1: null,
     };
+
+    /////////////////////////////////////////////////////////////////////////////
+                    ///////    Styling Variables    ///////
+    /////////////////////////////////////////////////////////////////////////////
 
     var show_points = true;
     var point_radius = 3;
@@ -64,6 +80,10 @@ function Braid(samples_by_genes_matrix, gene_sets, classes) {
     var middle_color = '#c0c0c0';
     var positive_color = '#cc0000';
     var curve = 'linear';
+
+    var line_width = 1;
+    var line_opacity = 1.0;
+    var halo_width = 20;
     var halo_opacity = 0.1;
 
     var gene_spacing = 50;
@@ -107,14 +127,14 @@ function Braid(samples_by_genes_matrix, gene_sets, classes) {
         identity: (d) => id_colors(d.sample),
         class: (d) => class_colors[lines_color_by](d.classes[lines_color_by]),
         unform: (d) => default_line_color,
-        z_stddev: (d) => color_range(lines_color_by, 'zscore')(d.sample),
-        z_mad: (d) => color_range(lines_color_by, 'zscore_mad')(d.sample),
+        zscore_stddev: (d) => color_range(lines_color_by, 'zscore_stddev')(d.sample),
+        zscore_mad: (d) => color_range(lines_color_by, 'zscore_mad')(d.sample),
         pc1: (d) => pc1_colors(d.pc1),
     }
 
     var line_from_sample = d3.line()
                               .y((d, i) => y(i))
-                              .x((d) => x_scales[d.gene](d.count))
+                              .x((d) => x_scales[d.gene](d.value))
                               .curve(curves[curve]);
 
 
@@ -129,9 +149,9 @@ function Braid(samples_by_genes_matrix, gene_sets, classes) {
     var gene_set_name = "";
     var genes = [];
     var gene_wise = [];
+    var gene_wise_indexer = {};
     var ordered_gene_wise = [];
     var sample_wise = [];
-    var num_nonzero_samples_per_gene = {};
     var x_scales = {};
     var genes_pc1 = [];
     var samples_pc1 = [];
@@ -185,20 +205,20 @@ function Braid(samples_by_genes_matrix, gene_sets, classes) {
                 'num_nonzeros': num_nonzeros,
                 'min'      : d3.min(counts_arr),
                 'max'      : d3.max(counts_arr),
-                'mean'     : mean,
+                'mean'     : mean,                  // should we only be counting non-zeros?
                 'stddev'   : stddev,
                 'mad'      : mad,
                 'pc1'      : null,
                 'counts'   : counts_arr,
-                'samples'  : Object.values(_(counts).mapObject((count, sample) => { return {
-                    'id'         : sample+"_"+gene,
-                    'sample'     : sample,
-                    'classes'    : classes[sample],
-                    'gene'       : gene,
-                    'count'      : count,
-                    'zscore'     : (count - mean) / stddev,
-                    'zscore_mad' : (count - mean) / mad,
-                }})),
+                'samples'  : Object.entries(counts).map(([sample, count]) => { return {
+                    'id'            : sample+"_"+gene,
+                    'sample'        : sample,
+                    'classes'       : classes[sample],
+                    'gene'          : gene,
+                    'counts'        : count,
+                    'zscore_stddev' : stddev === 0 ? 0 : (count - mean) / stddev,
+                    'zscore_mad'    : mad === 0 ? 0    : (count - mean) / mad,
+                }}),
                 'classes':
                     _(categories_to_values_to_members).mapObject((values_to_members) =>
                         _(values_to_members).mapObject((sample_ids, label) => {
@@ -217,7 +237,7 @@ function Braid(samples_by_genes_matrix, gene_sets, classes) {
                 }
             });
 
-        num_nonzero_samples_per_gene = _.object(_(gene_wise).pluck('gene'), _(gene_wise).pluck('num_nonzeros'));
+        gene_wise_indexer = _.object(gene_wise.map((gene, i) => [gene.id, i]));
 
         order();
         render();
@@ -229,25 +249,29 @@ function Braid(samples_by_genes_matrix, gene_sets, classes) {
                     minimum_nonzero_=minimum_nonzero}={}) {
 
         values = values_;
+        value_accessor = value_accessors[values];
         sorting = sorting_;
         minimum_nonzero = minimum_nonzero_;
         if (minimum_nonzero > 0) { gene_set_name = ""; }
 
+        // Filter by number non-zeros
         ordered_gene_wise = gene_wise.filter((gene) => gene.num_nonzeros >= minimum_nonzero);
 
         if (ordered_gene_wise.length === 0) { sample_wise = []; return }
 
-        genes_pc1 = reorder.pca1d(reorder.transpose(ordered_gene_wise.map((gene) => gene.counts)));
+        // Set Gene-Wise PC1
+        genes_pc1 = reorder.pca1d(reorder.transpose(ordered_gene_wise.map(value_accessor)));
         _(_.zip(ordered_gene_wise, genes_pc1)).each((gene, pc1) => gene.pc1 = pc1);
 
+        // Order Genes
         if (reordering && ordered_gene_wise.length > 1) {
             // permutation_order = reorder.sort_order(genes_pc1);
-            permutation_order = reorder.optimal_leaf_order()(ordered_gene_wise.map((gene) => gene.counts)).reverse();  // get dendogram out?
+            permutation_order = reorder.optimal_leaf_order()(ordered_gene_wise.map(value_accessor)).reverse();  // get dendogram out?
             ordered_gene_wise = reorder.stablepermute(ordered_gene_wise, permutation_order);
 
         } else { permutation_order = range(ordered_gene_wise.length); }
 
-        // Sample-Wise
+        // Build Sample-Wise
         sample_wise = Object.entries(matrix).map(([sample, genes]) => { return {
                         'id'     : sample,
                         'sample' : sample,
@@ -257,40 +281,99 @@ function Braid(samples_by_genes_matrix, gene_sets, classes) {
                                     Object.entries(genes).map(([gene, count]) => { return {
                                       'id'       : gene+"_"+sample,
                                       'gene'     : gene,
-                                      'count'    : count,
-                                      'num_nonzeros': num_nonzero_samples_per_gene[gene],
+                                      'value'    : values === 'counts' ? count : _(gene_wise[gene_wise_indexer[gene]].samples).findWhere({'sample':sample})[values],
+                                      'num_nonzeros': gene_wise[gene_wise_indexer[gene]].num_nonzeros,
                                     }}).filter((gene) => gene.num_nonzeros >= minimum_nonzero),
                                     permutation_order)
                       }});
 
-        samples_pc1 = reorder.pca1d(ordered_gene_wise.map((sample) => sample.counts));
+        // Set Sample-Wise PC1
+        samples_pc1 = reorder.pca1d(ordered_gene_wise.map(value_accessor));
         _(_.zip(sample_wise, samples_pc1)).each(([sample, pc1]) => { sample.pc1 = pc1; });
-        samples_pc1_domain = d3.extent(samples_pc1);
+        samples_pc1_domain = d3.extent(samples_pc1);  // hack TODO get rid of this.
+
+        // Add Averages
+        if (show_averages) {
+            console.log('show averages! append to sample wise! ');
+            // sample_wise.append()
+        }
+
+        recompute_domains_and_ranges();
 
     }
 
-    function render({scaling_=scaling}={}) {
+    function recompute_domains_and_ranges() {
 
-        // special case for ordered_gene_wise being empty
+        min = d3.min(ordered_gene_wise.map(value_accessor).map((a) => d3.min(a)));
+        max = d3.max(ordered_gene_wise.map(value_accessor).map((a) => d3.max(a)));
 
-        x_scales = _.object(ordered_gene_wise.map((obj) =>
-            [obj.gene, d3.scaleLinear().domain([0, d3.max([obj.mean*2, 10])]).range([50,h]).nice()]
-        ));
+        if      (min >= 0) { min = 0; }
+        else if (max <= 0) { max = 0; }
+        else {
+            abs_max = d3.max([min, max].map(Math.abs));
+            min = -abs_max;
+            max = abs_max;
+        }
+
+        if (scaling === 'absolute') {
+
+                domains = _.object(gene_wise.map((gene) => [gene.id, [min, max]]));
+                ranges  = _.object(gene_wise.map((gene) => [gene.id, [50,h]]));
+
+        } else if (scaling === 'mean') {
+
+            if (values === 'counts') {
+                domains = _.object(gene_wise.map((gene) => [gene.id, [0, d3.max([gene.mean*2, 10])] ]));
+                ranges  = _.object(gene_wise.map((gene) => [gene.id, [50,h]]));
+            }
+            else if (values === 'zscore_stddev') {
+                domains = _.object(gene_wise.map((gene) => [gene.id, [-3, 3] ]));
+                ranges  = _.object(gene_wise.map((gene) => [gene.id, [50,h]]));
+            }
+            else if (values === 'zscore_mad') {
+                domains = _.object(gene_wise.map((gene) => [gene.id, [-3, 3] ]));
+                ranges  = _.object(gene_wise.map((gene) => [gene.id, [50,h]]));
+            }
+
+        } else if (scaling === 'log') {
+
+            if (values === 'counts') {
+                domains = _.object(gene_wise.map((gene) => [gene.id, [1, round_to_power_of_10(max)]]));
+                ranges  = _.object(gene_wise.map((gene) => [gene.id, [50,h]]));
+            }
+            else if (values === 'zscore_stddev' || values === 'zscore_mad') {
+                domains = _.object(gene_wise.map((gene) => [gene.id, [min, max].map(round_to_power_of_10)]));
+                ranges  = _.object(gene_wise.map((gene) => [gene.id, [50,h]]));
+            }
+        }
+
+    }
+
+    function render({scaling_=scaling,
+                     show_averages_=show_averages,
+                     gene_spacing_=gene_spacing}={}) {
+
+        if (scaling_ !== scaling) { scaling = scaling_; recompute_domains_and_ranges(); }
+        show_averages = show_averages_;
+        gene_spacing = gene_spacing_;
 
         title.text(gene_set_name);
+
+        x_scales = _.object(ordered_gene_wise.map((gene) => [gene.id, scale_types[scaling]().domain(domains[gene.id]).range(ranges[gene.id]).nice()]));
 
         text = g.selectAll(".text").data(ordered_gene_wise, idFunc);
         axes = g.selectAll(".axis").data(Object.entries(x_scales), function(d) { return d ? d[0] : this.id; });
         dots = g.selectAll(".dots").data(ordered_gene_wise, idFunc);
-        line = g.selectAll(".line").data(sample_wise);
-        halo = g.selectAll(".halo").data(sample_wise);
+        line = g.selectAll(".line").data(sample_wise, idFunc);
+        halo = g.selectAll(".halo").data(sample_wise, idFunc);
 
         // phase 1
-            // lines and halos disappear
+            // lines and halos which are updating are hidden and updated
+            // lines and exiting are hidden then removed
         t_last = d3.transition().duration(200);
         if (line.enter().size() === 0) {  // if lines are already drawn,
-            line.exit().transition(t_last).style("stroke-opacity", 0);
-            halo.exit().transition(t_last).style("stroke-opacity", 0);
+            line.exit().transition(t_last).style("stroke-opacity", 0).remove();
+            halo.exit().transition(t_last).style("stroke-opacity", 0).remove();
             line.transition(t_last).style("stroke-opacity", 0).on("end", function(d) { d3.select(this).attr("d", (d) => line_from_sample.curve(curves[curve])(d.genes)); });
             halo.transition(t_last).style("stroke-opacity", 0).on("end", function(d) { d3.select(this).attr("d", (d) => line_from_sample.curve(curves[curve])(d.genes)); });
             t_last = t_last.transition().duration(500);
@@ -312,9 +395,12 @@ function Braid(samples_by_genes_matrix, gene_sets, classes) {
             // gene symbols which are staying get re-arranged
             // dots which are staying get re-arranged
         if (text.size() > 0) {
-            axes.transition(t_last).attr("transform", (d, i) => "translate(0," + y(i) + ")")
-            dots.transition(t_last).attr("y", (d, i) => y(i) - max_point_radius)
-            text.transition(t_last).attr("y", (d, i) => y(i))
+            axes.transition(t_last).attr("transform", (d, i) => "translate(0," + y(i) + ")");
+            axes.transition(t_last).each(function (d) { d3.select(this).call(d3.axisBottom(d[1])) } );
+            dots.transition(t_last).attr("y", (d, i) => y(i) - max_point_radius);
+            // dots.transition(t_last).selectAll('.dot').attr("cx", (d) => console.log(x_scales[d.gene]) || console.log(d[values]) || x_scales[d.gene](d[values]) );
+            dots.transition(t_last).selectAll('.dot').attr("cx", (d) => x_scales[d.gene](d[values]) );
+            text.transition(t_last).attr("y", (d, i) => y(i));
             t_last = t_last.transition().duration(500);
         }
 
@@ -347,6 +433,8 @@ function Braid(samples_by_genes_matrix, gene_sets, classes) {
                 .style("opacity", 1);
             // .on("click", (d) => style({'lines_color_by_':this.id}))
 
+        if (scaling === 'log') { d3.selectAll(".tick text").text(null).filter(powerOfTen).text(10).append("tspan").attr("dy", "-.7em").text(function(d) { return Math.round(Math.log(d) / Math.LN10); }); };
+
         dots.enter()
             .append("svg")
             .attr("class", "dots")
@@ -359,7 +447,7 @@ function Braid(samples_by_genes_matrix, gene_sets, classes) {
                 .attr("class", "dot")
                 .attr("id", d => d.id)
                 .attr("cy", max_point_radius)
-                .attr("cx", (d) => x_scales[d.gene](d.count) )
+                .attr("cx", (d) => x_scales[d.gene](d[values]) )
                 .attr("visibility", show_points ? "visible" : "hidden")
                 .style("opacity", 0)
                 .attr("r", point_radius)
@@ -376,26 +464,27 @@ function Braid(samples_by_genes_matrix, gene_sets, classes) {
             .attr("class", "line")
             .attr("id", d => d.id)
             .style("fill", "none")
-            .style("stroke-opacity", 0)
             .attr("visibility", show_lines ? "visible" : "hidden")
             .attr("d", (d) => line_from_sample.curve(curves[curve])(d.genes))
             .style("stroke", (d) => line_colors[line_coloring_system](d))
+            .style("stroke-width", line_width)
+            .style("stroke-opacity", 0)
             .merge(line)
             .transition(t_last)
-                .style("stroke-opacity", 1);
+                .style("stroke-opacity", line_opacity);
 
         halo.enter()
             .append("path")
             .attr("class", "halo")
             .attr("id", d => d.id)
             .style("fill", "none")
-            .style("stroke-width", 20)
-            .style("stroke-linecap", "round")
-            .style("stroke-linejoin", "round")
-            .style("stroke-opacity", 0)
             .attr("visibility", show_halos ? "visible" : "hidden")
             .attr("d", (d) => line_from_sample.curve(curves[curve])(d.genes))
             .style("stroke", (d) => line_colors[line_coloring_system](d))
+            .style("stroke-linecap", "round")
+            .style("stroke-linejoin", "round")
+            .style("stroke-width", halo_width)
+            .style("stroke-opacity", 0)
             .merge(halo)
             .transition(t_last)
                 .style("stroke-opacity", halo_opacity);
@@ -416,6 +505,9 @@ function Braid(samples_by_genes_matrix, gene_sets, classes) {
                     middle_color_=middle_color,
                     positive_color_=positive_color,
                     curve_=curve,
+                    line_width_=line_width,
+                    line_opacity_=line_opacity,
+                    halo_width_=halo_width,
                     halo_opacity_=halo_opacity}={}) {
 
         show_points = show_points_;
@@ -432,9 +524,13 @@ function Braid(samples_by_genes_matrix, gene_sets, classes) {
         middle_color = middle_color_,
         positive_color = positive_color_,
         curve = curve_;
+        line_width = line_width_;
+        line_opacity = line_opacity_;
+        halo_width = halo_width_;
         halo_opacity = halo_opacity_;
 
-        if (line_coloring_system === 'z_stddev' || line_coloring_system === 'z_mad') {
+
+        if (line_coloring_system === 'zscore_stddev' || line_coloring_system === 'zscore_mad') {
             lines_color_by = ordered_gene_wise[0].gene;
             // g.selectAll(".axis") // bind click events?
         } else if (line_coloring_system === 'class') {
@@ -448,22 +544,22 @@ function Braid(samples_by_genes_matrix, gene_sets, classes) {
             .attr("visibility", show_points ? "visible" : "hidden")
             .attr("r", point_radius)
             .style("fill", (d) => point_colors[point_coloring_system](d));
-            // .style("opacity", );
 
         // lines are bound to sample_wise
         g.selectAll(".line")
             .attr("visibility", show_lines ? "visible" : "hidden")
             .attr("d", (d) => line_from_sample.curve(curves[curve])(d.genes))
             .style("stroke", (d) => line_colors[line_coloring_system](d))
-            .style("stroke-opacity", 1);
-             // .style("stroke-width", );
+            .style("stroke-width", line_width)
+            .style("stroke-opacity", line_opacity);
 
         // halos are bound to sample_wise
         g.selectAll(".halo")
             .attr("visibility", show_halos ? "visible" : "hidden")
             .attr("d", (d) => line_from_sample.curve(curves[curve])(d.genes))
             .style("stroke", (d) => line_colors[line_coloring_system](d))
-            .style("stroke-opacity", halo_opacity)
+            .style("stroke-width", halo_width)
+            .style("stroke-opacity", halo_opacity);
 
     }
 
