@@ -153,7 +153,7 @@ function Braid(samples_by_genes_matrix, gene_sets, classes) {
     var genes_pc1 = [];
     var samples_pc1 = [];
 
-    var x_scales;
+    var x_scales = {};
     var y = (index) => gene_spacing*index;
 
     function idFunc(d) { return d ? d.id : this.id; }
@@ -175,6 +175,7 @@ function Braid(samples_by_genes_matrix, gene_sets, classes) {
 
     var legend_lines = g.append("g").attr("class", "legend legendLines");
     var legend_points = g.append("g").attr("class", "legend legendPoints");
+
 
     /////////////////////////////////////////////////////////////////////////////
                           ///////    Methods    ///////
@@ -303,6 +304,7 @@ function Braid(samples_by_genes_matrix, gene_sets, classes) {
             // sample_wise.append()
         }
 
+        // Domains and Ranges
         recompute_domains_and_ranges();
 
     }
@@ -438,7 +440,6 @@ function Braid(samples_by_genes_matrix, gene_sets, classes) {
             .style("opacity", 0)
             .transition(t_last)
                 .style("opacity", 1);
-            // .on("click", (d) => style({'lines_color_by_':this.id}))
 
         if (scaling === 'log') { d3.selectAll(".tick text").text(null).filter(powerOfTen).text(10).append("tspan").attr("dy", "-.7em").text(function(d) { return Math.round(Math.log(d) / Math.LN10); }); };
 
