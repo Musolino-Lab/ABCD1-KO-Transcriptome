@@ -101,8 +101,6 @@
 
                     </div>
                     <div class="tab-content">
-
-
                         <div class="tab-pane card-body fade show active" id="geneset" role="tabpanel">
                             <input class="form-control" id="chooseGeneSet" placeholder="Choose a Gene Set..." />
                         </div>
@@ -149,12 +147,14 @@
                             </div>
                         </div>
 
-
                         <div class="tab-pane card-body fade" id="style" role="tabpanel">
                             <div>
                                 <label for="radius">Axis Spacing</label>
                                 <input type="range" id="gene_spacing" name="" min="30" max="150" step="1" value="50" style="position: relative; top: 3px;">
                             </div>
+
+                            <br>
+                            <div><input type="checkbox" id="show_legends" value="show_legends"><label> Show legends </label></div>
 
                             <hr>
                             <div><input type="checkbox" id="show_points" value="show_points" checked><label> Show Points </label></div>
@@ -168,7 +168,7 @@
                             <br>
                             <div id="point_coloring_system">
                                 <label>Color points</label>
-                                <div class="form-check"><input class="form-check-input" type="radio" name="point_coloring_system" value="unform"> Uniformly <input type="color" value="#333333" id="default_point_color"></div>
+                                <div class="form-check"><input class="form-check-input" type="radio" name="point_coloring_system" value="uniform"> Uniformly <input type="color" value="#333333" id="default_point_color"></div>
                                 <div class="form-check"><input class="form-check-input" type="radio" name="point_coloring_system" value="identity" checked> by Identity</div>
                                 <div class="form-check"><input class="form-check-input" type="radio" name="point_coloring_system" value="class"> by <select class="category"></select></div>
                             </div>
@@ -190,7 +190,7 @@
                             <br>
                             <div id="line_coloring_system">
                                 <label>Color lines</label>
-                                <div class="form-check"><input class="form-check-input" type="radio" name="line_coloring_system" value="unform"> Uniformly <input type="color" value="#333333" id="default_line_color"></div>
+                                <div class="form-check"><input class="form-check-input" type="radio" name="line_coloring_system" value="uniform"> Uniformly <input type="color" value="#333333" id="default_line_color"></div>
                                 <div class="form-check"><input class="form-check-input" type="radio" name="line_coloring_system" value="identity" checked> by Identity</div>
                                 <div class="form-check"><input class="form-check-input" type="radio" name="line_coloring_system" value="class"> by <select class="category"></select></div>
                                 <div class="form-check"><input class="form-check-input" type="radio" name="line_coloring_system" value="zscore_stddev"> by Z-Score (stddev) on a single gene...</div>
@@ -235,9 +235,10 @@
     <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/js/bootstrap.min.js" integrity="sha384-JZR6Spejh4U02d8jOt6vLEHfe/JQGiRRSQQxSfFWpi1MquVdAyjUar5+76PVCmYl" crossorigin="anonymous"></script>
 
     <script type="text/javascript" src="https://d3js.org/d3.v5.min.js"></script>
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/d3-legend/2.25.6/d3-legend.min.js"></script>
 
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/awesomplete/1.1.2/awesomplete.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/underscore.js/1.9.1/underscore-min.js"></script>
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/awesomplete/1.1.2/awesomplete.js"></script>
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/underscore.js/1.9.1/underscore-min.js"></script>
 
     <script type="text/javascript" src="reorder.js"></script>
     <script type="text/javascript" src="braid.js"></script>
@@ -298,12 +299,13 @@ chooseGenes.on('input', manual_gene_list_edit_debounced);
                  ///////    Style Figure    ///////
 /////////////////////////////////////////////////////////////////////////////
 
+$("#reordering").change(                        function () { braid.set_reordering(this.checked) });
+$("#minimum_nonzero").change(                   function () { braid.order({'minimum_nonzero_': parseInt(this.value)}); braid.render(); refresh_genes(); });
 $("#values input:radio").change(                function () { braid.order({'values_': this.value}); braid.render(); refresh_genes(); });
 $("#show_averages").change(                     function () { braid.render({'show_averages_': this.checked}); });
 $("#scaling input:radio").change(               function () { braid.render({'scaling_': this.value}); refresh_genes(); });
 $("#sorting input:radio").change(               function () { braid.order({'sorting_': this.value}); braid.render(); refresh_genes(); });
-$("#reordering").change(                        function () { braid.set_reordering(this.checked) });
-$("#minimum_nonzero").change(                   function () { braid.order({'minimum_nonzero_': parseInt(this.value)}); braid.render(); refresh_genes(); });
+$("#show_legends").change(                      function () { braid.style({'show_legends_': this.checked}) });
 
 $("#gene_spacing").change(                      function () { braid.render({'gene_spacing_': parseInt(this.value)}) });
 $("#show_points").change(                       function () { braid.style({'show_points_': this.checked}) });

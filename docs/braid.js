@@ -76,17 +76,14 @@ function Braid(samples_by_genes_matrix, gene_sets, classes) {
     var middle_color = '#c0c0c0';
     var positive_color = '#cc0000';
     var curve = 'linear';
-
     var line_width = 1;
     var line_opacity = 1.0;
     var halo_width = 20;
     var halo_opacity = 0.1;
-
     var gene_spacing = 50;
     var max_point_radius = 20;
+    var show_legends = false;
 
-    var animation_out = d3.transition().duration(700);
-    var animation_in = d3.transition().duration(700);
 
     var colors20 = ["#3366cc", "#dc3912", "#ff9900", "#109618", "#990099", "#0099c6", "#dd4477",
                     "#66aa00", "#b82e2e", "#316395", "#994499", "#22aa99", "#aaaa11", "#6633cc",
@@ -108,23 +105,27 @@ function Braid(samples_by_genes_matrix, gene_sets, classes) {
         samples = _.object(_(gene_wise).findWhere({'gene':gene}).samples.map(sample => [sample.sample, sample[attr]]));
         domain = d3.extent(Object.values(samples)); domain.splice(1, 0, 0);
         scale = d3.scaleLinear().domain(domain).range([negative_color, middle_color, positive_color]);
-        return (sample) => scale(samples[sample])
+        return [(sample) => scale(samples[sample]), scale]
     }
+    var zscore_stddev_colors = null;
+    var zscore_stddev_color_scale = null;
+    var zscore_mad_colors = null;
+    var zscore_mad_color_scale = null;
     var samples_pc1_domain = [];
     var pc1_colors = null;
 
     var point_colors = {
         identity: (d) => id_colors(d.sample),
         class: (d) => class_colors[points_color_by](d.classes[points_color_by]),
-        unform: (d) => default_point_color,
+        uniform: (d) => default_point_color,
     }
 
     var line_colors = {
         identity: (d) => id_colors(d.sample),
         class: (d) => class_colors[lines_color_by](d.classes[lines_color_by]),
-        unform: (d) => default_line_color,
-        zscore_stddev: (d) => color_range(lines_color_by, 'zscore_stddev')(d.sample),
-        zscore_mad: (d) => color_range(lines_color_by, 'zscore_mad')(d.sample),
+        uniform: (d) => default_line_color,
+        zscore_stddev: (d) => zscore_stddev_colors(d.sample),
+        zscore_mad: (d) => zscore_mad_colors(d.sample),
         pc1: (d) => pc1_colors(d.pc1),
     }
 
@@ -171,6 +172,9 @@ function Braid(samples_by_genes_matrix, gene_sets, classes) {
                  .attr("x", 0)
                  .attr("y", 0)
                  .attr("dy", "-3em");
+
+    var legend_lines = g.append("g").attr("class", "legend legendLines");
+    var legend_points = g.append("g").attr("class", "legend legendPoints");
 
     /////////////////////////////////////////////////////////////////////////////
                           ///////    Methods    ///////
@@ -400,7 +404,6 @@ function Braid(samples_by_genes_matrix, gene_sets, classes) {
             axes.transition(t_last).attr("transform", (d, i) => "translate(0," + y(i) + ")");
             axes.transition(t_last).each(function (d) { d3.select(this).call(d3.axisBottom(d[1])) } );
             dots.transition(t_last).attr("y", (d, i) => y(i) - max_point_radius);
-            // dots.transition(t_last).selectAll('.dot').attr("cx", (d) => console.log(x_scales[d.gene]) || console.log(d[values]) || x_scales[d.gene](d[values]) );
             dots.transition(t_last).selectAll('.dot').attr("cx", (d) => x_scales[d.gene](d[values]) );
             text.transition(t_last).attr("y", (d, i) => y(i));
             t_last = t_last.transition().duration(500);
@@ -473,6 +476,8 @@ function Braid(samples_by_genes_matrix, gene_sets, classes) {
             .style("stroke-width", line_width)
             .style("stroke-opacity", 0)
             .merge(line)
+            .on("mouseover", setFocus)
+            .on("mouseout", removeFocus)
             .transition(t_last)
                 .style("stroke-opacity", line_opacity);
 
@@ -489,6 +494,8 @@ function Braid(samples_by_genes_matrix, gene_sets, classes) {
             .style("stroke-width", halo_width)
             .style("stroke-opacity", 0)
             .merge(halo)
+            .on("mouseover", setFocus)
+            .on("mouseout", removeFocus)
             .transition(t_last)
                 .style("stroke-opacity", halo_opacity);
 
@@ -511,7 +518,8 @@ function Braid(samples_by_genes_matrix, gene_sets, classes) {
                     line_width_=line_width,
                     line_opacity_=line_opacity,
                     halo_width_=halo_width,
-                    halo_opacity_=halo_opacity}={}) {
+                    halo_opacity_=halo_opacity,
+                    show_legends_=show_legends}={}) {
 
         show_points = show_points_;
         point_radius = point_radius_;
@@ -531,21 +539,25 @@ function Braid(samples_by_genes_matrix, gene_sets, classes) {
         line_opacity = line_opacity_;
         halo_width = halo_width_;
         halo_opacity = halo_opacity_;
+        show_legends=show_legends_;
 
 
-        g.selectAll(".text").on("click", null);
+        g.selectAll(".text").on("click", (d) => window.open("http://www.genecards.org/cgi-bin/carddisp.pl?gene="+d.id,'_blank'));
 
         if (line_coloring_system === 'zscore_stddev' || line_coloring_system === 'zscore_mad') {
 
             g.selectAll(".text").style("font-weight", 300).on("click", function(d) { style({lines_color_by_: d.id}); });
-
-            if (!_(ordered_gene_wise).findWhere({'gene': lines_color_by})) { lines_color_by = ordered_gene_wise[1].id }
-
+            if (!_(ordered_gene_wise).findWhere({'gene': lines_color_by})) { lines_color_by = ordered_gene_wise[0].id }
             d3.select('.text#'+lines_color_by).style("font-weight", 700);
+
+            zscore_stddev_colors = color_range(lines_color_by, 'zscore_stddev');
+            zscore_stddev_color_scale = zscore_stddev_colors[1]; zscore_stddev_colors = zscore_stddev_colors[0];
+            zscore_mad_colors = color_range(lines_color_by, 'zscore_mad');
+            zscore_mad_color_scale = zscore_mad_colors[1]; zscore_mad_colors = zscore_mad_colors[0];
 
         } else if (line_coloring_system === 'class') {
 
-            lines_color_by = categories[0];
+            lines_color_by = categories[0];  // TODO FIX THIS SHIT
 
         } else if (line_coloring_system === 'pc1') {
 
@@ -574,6 +586,40 @@ function Braid(samples_by_genes_matrix, gene_sets, classes) {
             .style("stroke-width", halo_width)
             .style("stroke-opacity", halo_opacity);
 
+
+        if (show_legends) {
+
+            if (point_coloring_system !== 'uniform') {
+
+                s = {'identity': id_colors, 'class': class_colors[points_color_by]}[point_coloring_system];
+                legend_points.call(d3.legendColor().scale(s)).attr("transform", "translate(-240,0)");
+
+            } else { legend_points.selectAll("*").remove(); }
+
+            if (line_coloring_system !== 'uniform' && line_coloring_system !== point_coloring_system) {
+
+                s = {'identity': id_colors, 'class': class_colors[lines_color_by], 'zscore_stddev': zscore_stddev_color_scale, 'zscore_mad': zscore_mad_color_scale, 'pc1': pc1_colors}[line_coloring_system];
+                legend_lines.call(d3.legendColor().scale(s)).attr("transform", "translate(-240,"+(legend_points.node().getBBox().height+40)+")");
+
+            } else { legend_lines.selectAll("*").remove(); }
+
+        } else {
+            legend_points.selectAll("*").remove();
+            legend_lines.selectAll("*").remove();
+        }
+
+    }
+
+    function setFocus(d) {
+        g.selectAll(".line").style('stroke-opacity', line_opacity*0.5);
+        g.selectAll(".halo").style('stroke-opacity', halo_opacity*0.25);
+        g.select(".line#"+d.id).style('stroke-opacity', 1);
+        g.select(".halo#"+d.id).style('stroke-opacity', halo_opacity*1.5);
+    }
+
+    function removeFocus(d) {
+        g.selectAll(".line").style('stroke-opacity', line_opacity);
+        g.selectAll(".halo").style('stroke-opacity', halo_opacity);
     }
 
 
