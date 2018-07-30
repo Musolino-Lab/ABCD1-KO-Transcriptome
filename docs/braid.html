@@ -164,6 +164,10 @@
                                 <label for="radius">Point Radius</label>
                                 <input type="range" id="radius" name="" min="2" max="20" step="0.1" value="2" style="position: relative; top: 3px;">
                             </div>
+                            <div>
+                                <label for="point_opacity">Point Opacity</label>
+                                <input type="range" id="point_opacity" name="" min="0.1" max="10" step="0.1" value="1" style="position: relative; top: 3px;">
+                            </div>
 
                             <br>
                             <div id="point_coloring_system">
@@ -310,6 +314,7 @@ $("#show_legends").change(                      function () { braid.style({'show
 $("#gene_spacing").change(                      function () { braid.render({'gene_spacing_': parseInt(this.value)}) });
 $("#show_points").change(                       function () { braid.style({'show_points_': this.checked}) });
 $("#radius").change(                            function () { braid.style({'point_radius_': parseFloat(this.value)}) });
+$("#point_opacity").change(                     function () { braid.style({'point_opacity_': parseFloat(this.value)}) });
 $("#point_coloring_system input:radio").change( function () { braid.style({'point_coloring_system_': this.value}) });
 $("#point_coloring_system .category").change(   function () { braid.style({'points_color_by_': this.value}) });
 $("#default_point_color").change(               function () { braid.style({'default_point_color_': this.value}) });

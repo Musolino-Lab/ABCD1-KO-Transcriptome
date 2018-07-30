@@ -64,6 +64,7 @@ function Braid(samples_by_genes_matrix, gene_sets, classes) {
 
     var show_points = true;
     var point_radius = 3;
+    var point_opacity = 1;
     var point_coloring_system = 'identity';
     var points_color_by = categories[0];
     var default_point_color = '#333333';
@@ -402,7 +403,7 @@ function Braid(samples_by_genes_matrix, gene_sets, classes) {
         if (axes.size() > 0) {
             axes.transition(t_last).attr("transform", (d, i) => "translate(0," + y(i) + ")");
             axes.transition(t_last).selectAll('.sub').each(function (d) { d3.select(this).call(d3.axisBottom(d[1])) } );
-            dots.transition(t_last).attr("y", (d, i) => y(i) - max_point_radius);
+            dots.transition(t_last).attr("transform", (d, i) => "translate(0," + (y(i) - max_point_radius) + ")")
             dots.transition(t_last).selectAll('.dot').attr("cx", (d) => x_scales[d.gene](d[values]) );
             t_last = t_last.transition().duration(500);
         }
@@ -415,6 +416,7 @@ function Braid(samples_by_genes_matrix, gene_sets, classes) {
             .attr("class", "axis")
             .attr("id", d => d[0])
             .attr("transform", (d, i) => "translate(0," + y(i) + ")")
+            .call(d3.drag().on("start", drag_axis_start).on("drag", drag_axis).on("end", drag_axis_end))
                 .append("g")
                 .attr("class", "sub")
                 .attr("id", d => d.id)
@@ -422,13 +424,12 @@ function Braid(samples_by_genes_matrix, gene_sets, classes) {
             .select(function() { return this.parentNode; })
                 .append("text")
                 .attr("class", "text")
-                .attr("id", d => d.id)
+                .attr("id", d => d[0])
                 .text(d => d[0])
                 .attr("font-family", "sans-serif")
                 .style("font-weight", 300)
                 .style("cursor", "pointer")
                 .style("text-anchor", "middle")
-                .attr("id", d => d[0])
                 .attr("dy", "1em")
                 .on("click", (d) => line_coloring_system[0] === 'z' ? style({lines_color_by_: d.id}) : GeneCards(d))
             .select(function() { return this.parentNode; })
@@ -439,10 +440,10 @@ function Braid(samples_by_genes_matrix, gene_sets, classes) {
         if (scaling === 'log') { d3.selectAll(".tick text").text(null).filter(powerOfTen).text(10).append("tspan").attr("dy", "-.7em").text(function(d) { return Math.round(Math.log(d) / Math.LN10); }); };
 
         dots.enter()
-            .append("svg")
+            .append("g")
             .attr("class", "dots")
             .attr("id", d => d.id)
-            .attr("y", (d, i) => y(i) - max_point_radius)
+            .attr("transform", (d, i) => "translate(0," + (y(i) - max_point_radius) + ")")
                 .selectAll(".dot")
                 .data((d) => d.samples, idFunc)
                 .enter()
@@ -456,7 +457,7 @@ function Braid(samples_by_genes_matrix, gene_sets, classes) {
                 .attr("r", point_radius)
                 .style("fill", (d) => point_colors[point_coloring_system](d))
                 .transition(t_last)
-                    .style("opacity", 1);
+                    .style("opacity", point_opacity);
 
         // phase 5
             // new lines and halos appear
@@ -500,6 +501,7 @@ function Braid(samples_by_genes_matrix, gene_sets, classes) {
 
     function style({show_points_=show_points,
                     point_radius_=point_radius,
+                    point_opacity_=point_opacity,
                     point_coloring_system_=point_coloring_system,
                     points_color_by_=points_color_by,
                     default_point_color_=default_point_color,
@@ -520,6 +522,7 @@ function Braid(samples_by_genes_matrix, gene_sets, classes) {
 
         show_points = show_points_;
         point_radius = point_radius_;
+        point_opacity = point_opacity_;
         point_coloring_system = point_coloring_system_;
         points_color_by = points_color_by_;
         default_point_color = default_point_color_;
@@ -563,7 +566,8 @@ function Braid(samples_by_genes_matrix, gene_sets, classes) {
         g.selectAll(".dot")
             .attr("visibility", show_points ? "visible" : "hidden")
             .attr("r", point_radius)
-            .style("fill", (d) => point_colors[point_coloring_system](d));
+            .style("fill", (d) => point_colors[point_coloring_system](d))
+            .style("opacity", point_opacity);
 
         // lines are bound to sample_wise
         g.selectAll(".line")
@@ -602,6 +606,24 @@ function Braid(samples_by_genes_matrix, gene_sets, classes) {
             legend_points.selectAll("*").remove();
             legend_lines.selectAll("*").remove();
         }
+
+    }
+
+    function drag_axis_start(d) {
+        g.selectAll(".line").transition().duration(100).style('stroke-opacity', 0);
+        g.selectAll(".halo").transition().duration(100).style('stroke-opacity', 0);
+    }
+    function drag_axis(d) {
+        d3.select(this).attr("transform", "translate(0," + d3.event.y + ")");
+        d3.select(".dots#"+d[0]).attr("transform", (d, i) => "translate(0," + (d3.event.y - max_point_radius) + ")");
+
+        // if I've crossed an axis, move that axis.
+
+        // ordered_gene_wise
+    }
+    function drag_axis_end(d) {
+        // set in stone the new order
+        render();
 
     }
 
