@@ -158,7 +158,6 @@ function Braid(samples_by_genes_matrix, gene_sets, classes) {
 
     function idFunc(d) { return d ? d.id : this.id; }
 
-    var text = g.selectAll(".text");
     var axes = g.selectAll(".axis");
     var dots = g.selectAll(".dots");
     var line = g.selectAll(".line");
@@ -369,7 +368,6 @@ function Braid(samples_by_genes_matrix, gene_sets, classes) {
 
         x_scales = _.object(ordered_gene_wise.map((gene) => [gene.id, scale_types[scaling]().domain(domains[gene.id]).range(ranges[gene.id]).nice()]));
 
-        text = g.selectAll(".text").data(ordered_gene_wise, idFunc);
         axes = g.selectAll(".axis").data(Object.entries(x_scales), function(d) { return d ? d[0] : this.id; });
         dots = g.selectAll(".dots").data(ordered_gene_wise, idFunc);
         line = g.selectAll(".line").data(sample_wise, idFunc);
@@ -391,8 +389,7 @@ function Braid(samples_by_genes_matrix, gene_sets, classes) {
             // old axes collapse to 0
             // old gene symbols lose opacity
             // rows of dots corresponding to old genes disappear
-        if (text.exit().size() > 0) {
-            text.exit().transition(t_last).style("opacity", 0).remove();
+        if (axes.exit().size() > 0) {
             axes.exit().transition(t_last).style("opacity", 0).remove();
             dots.exit().transition(t_last).style("opacity", 0).remove();
             t_last = t_last.transition().duration(500);
@@ -402,44 +399,42 @@ function Braid(samples_by_genes_matrix, gene_sets, classes) {
             // axes which are staying get re-arranged
             // gene symbols which are staying get re-arranged
             // dots which are staying get re-arranged
-        if (text.size() > 0) {
+        if (axes.size() > 0) {
             axes.transition(t_last).attr("transform", (d, i) => "translate(0," + y(i) + ")");
-            axes.transition(t_last).each(function (d) { d3.select(this).call(d3.axisBottom(d[1])) } );
+            axes.transition(t_last).selectAll('.sub').each(function (d) { d3.select(this).call(d3.axisBottom(d[1])) } );
             dots.transition(t_last).attr("y", (d, i) => y(i) - max_point_radius);
             dots.transition(t_last).selectAll('.dot').attr("cx", (d) => x_scales[d.gene](d[values]) );
-            text.transition(t_last).attr("y", (d, i) => y(i));
             t_last = t_last.transition().duration(500);
         }
 
         // phase 4
             // new gene symbol names fade in
             // new axes roll out
-        text.enter()
-            .append("text")
-            .attr("class", "text")
-            .attr("id", d => d.id)
-            .text((d) => d.gene)
-            .attr("font-family", "sans-serif")
-            .style("font-weight", 300)
-            .style("cursor", "pointer")
-            .style("text-anchor", "middle")
-            .attr("x", 0) // (x_pos(0) + x_neg(0)) / 2)
-            .attr("y", (d, i) => y(i))
-            .attr("dy", "1em")
-            .on("click", (d) => line_coloring_system[0] === 'z' ? style({lines_color_by_: d.id}) : GeneCards(d))
-            .style("opacity", 0)
-            .transition(t_last)
-                .style("opacity", 1);
-
         axes.enter()
             .append("g")
             .attr("class", "axis")
             .attr("id", d => d[0])
             .attr("transform", (d, i) => "translate(0," + y(i) + ")")
-            .each(function (d) { d3.select(this).call(d3.axisBottom(d[1])) })
-            .style("opacity", 0)
-            .transition(t_last)
-                .style("opacity", 1);
+                .append("g")
+                .attr("class", "sub")
+                .attr("id", d => d.id)
+                .each(function (d) { d3.select(this).call(d3.axisBottom(d[1])) })
+            .select(function() { return this.parentNode; })
+                .append("text")
+                .attr("class", "text")
+                .attr("id", d => d.id)
+                .text(d => d[0])
+                .attr("font-family", "sans-serif")
+                .style("font-weight", 300)
+                .style("cursor", "pointer")
+                .style("text-anchor", "middle")
+                .attr("id", d => d[0])
+                .attr("dy", "1em")
+                .on("click", (d) => line_coloring_system[0] === 'z' ? style({lines_color_by_: d.id}) : GeneCards(d))
+            .select(function() { return this.parentNode; })
+                .style("opacity", 0)
+                .transition(t_last)
+                    .style("opacity", 1);
 
         if (scaling === 'log') { d3.selectAll(".tick text").text(null).filter(powerOfTen).text(10).append("tspan").attr("dy", "-.7em").text(function(d) { return Math.round(Math.log(d) / Math.LN10); }); };
 
