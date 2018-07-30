@@ -45,7 +45,7 @@ function Braid(samples_by_genes_matrix, gene_sets, classes) {
     var scale_types = {
         mean     : () => d3.scaleLinear(),
         absolute : () => d3.scaleLinear(),
-        log      : () => d3.scaleLog().clamp(true),  // in the future this will be a magic scale.
+        log      : () => d3.scaleLog().clamp(true),  // in the future this will be a magic scale: https://stackoverflow.com/questions/51584888/how-to-write-a-d3-positive-and-negative-logarithmic-scale
     };
     var domains = {};
     var ranges = {};
@@ -415,7 +415,6 @@ function Braid(samples_by_genes_matrix, gene_sets, classes) {
         text.enter()
             .append("text")
             .attr("class", "text")
-            .attr("id", d => d.id)
             .text((d) => d.gene)
             .attr("font-family", "sans-serif")
             .style("font-weight", 300)
@@ -424,6 +423,7 @@ function Braid(samples_by_genes_matrix, gene_sets, classes) {
             .attr("x", 0) // (x_pos(0) + x_neg(0)) / 2)
             .attr("y", (d, i) => y(i))
             .attr("dy", "1em")
+            .on("click", (d) => line_coloring_system[0] === 'z' ? style({lines_color_by_: d.id}) : GeneCards(d))
             .style("opacity", 0)
             .transition(t_last)
                 .style("opacity", 1);
@@ -431,7 +431,6 @@ function Braid(samples_by_genes_matrix, gene_sets, classes) {
         axes.enter()
             .append("g")
             .attr("class", "axis")
-            .attr("id", d => d[0])
             .attr("transform", (d, i) => "translate(0," + y(i) + ")")
             .each(function (d) { d3.select(this).call(d3.axisBottom(d[1])) })
             .style("opacity", 0)
@@ -444,14 +443,12 @@ function Braid(samples_by_genes_matrix, gene_sets, classes) {
         dots.enter()
             .append("svg")
             .attr("class", "dots")
-            .attr("id", d => d.id)
             .attr("y", (d, i) => y(i) - max_point_radius)
                 .selectAll(".dot")
                 .data((d) => d.samples, idFunc)
                 .enter()
                 .append("circle")
                 .attr("class", "dot")
-                .attr("id", d => d.id)
                 .attr("cy", max_point_radius)
                 .attr("cx", (d) => x_scales[d.gene](d[values]) )
                 .attr("visibility", show_points ? "visible" : "hidden")
@@ -468,7 +465,6 @@ function Braid(samples_by_genes_matrix, gene_sets, classes) {
         line.enter()
             .append("path")
             .attr("class", "line")
-            .attr("id", d => d.id)
             .style("fill", "none")
             .attr("visibility", show_lines ? "visible" : "hidden")
             .attr("d", (d) => line_from_sample.curve(curves[curve])(d.genes))
@@ -484,7 +480,6 @@ function Braid(samples_by_genes_matrix, gene_sets, classes) {
         halo.enter()
             .append("path")
             .attr("class", "halo")
-            .attr("id", d => d.id)
             .style("fill", "none")
             .attr("visibility", show_halos ? "visible" : "hidden")
             .attr("d", (d) => line_from_sample.curve(curves[curve])(d.genes))
@@ -542,11 +537,9 @@ function Braid(samples_by_genes_matrix, gene_sets, classes) {
         show_legends=show_legends_;
 
 
-        g.selectAll(".text").on("click", (d) => window.open("http://www.genecards.org/cgi-bin/carddisp.pl?gene="+d.id,'_blank'));
-
         if (line_coloring_system === 'zscore_stddev' || line_coloring_system === 'zscore_mad') {
 
-            g.selectAll(".text").style("font-weight", 300).on("click", function(d) { style({lines_color_by_: d.id}); });
+            g.selectAll(".text").style("font-weight", 300).on("click", (d) => style({lines_color_by_: d.id}));
             if (!_(ordered_gene_wise).findWhere({'gene': lines_color_by})) { lines_color_by = ordered_gene_wise[0].id }
             d3.select('.text#'+lines_color_by).style("font-weight", 700);
 
@@ -621,6 +614,8 @@ function Braid(samples_by_genes_matrix, gene_sets, classes) {
         g.selectAll(".line").style('stroke-opacity', line_opacity);
         g.selectAll(".halo").style('stroke-opacity', halo_opacity);
     }
+
+    function GeneCards(d) { window.open("http://www.genecards.org/cgi-bin/carddisp.pl?gene="+d.id,'_blank') }
 
 
     /////////////////////////////////////////////////////////////////////////////
