@@ -57,10 +57,6 @@ function Braid(samples_by_genes_matrix, gene_sets, classes) {
     }
     value_accessor = value_accessors.counts;
 
-    var sortings = {
-        complete: null,
-        pc1: null,
-    };
 
     /////////////////////////////////////////////////////////////////////////////
                     ///////    Styling Variables    ///////
@@ -265,8 +261,13 @@ function Braid(samples_by_genes_matrix, gene_sets, classes) {
 
         // Order Genes
         if (reordering && ordered_gene_wise.length > 1) {
-            // permutation_order = reorder.sort_order(genes_pc1);
-            permutation_order = reorder.optimal_leaf_order()(ordered_gene_wise.map(value_accessor)).reverse();  // get dendogram out?
+
+            if (sorting === 'pc1') {
+                permutation_order = reorder.sort_order(genes_pc1);
+            } else if (sorting === 'complete') {
+                permutation_order = reorder.optimal_leaf_order()(ordered_gene_wise.map(value_accessor)).reverse();  // get dendogram out?
+            } else { console.log(' this should never happen '); }
+
             ordered_gene_wise = reorder.stablepermute(ordered_gene_wise, permutation_order);
 
         } else { permutation_order = range(ordered_gene_wise.length); }
@@ -304,8 +305,9 @@ function Braid(samples_by_genes_matrix, gene_sets, classes) {
 
     function recompute_domains_and_ranges() {
 
-        min = d3.min(ordered_gene_wise.map(value_accessor).map((a) => d3.min(a)));
-        max = d3.max(ordered_gene_wise.map(value_accessor).map((a) => d3.max(a)));
+        arr2d = ordered_gene_wise.map(value_accessor);
+        min = d3.min(arr2d.map((a) => d3.min(a)));
+        max = d3.max(arr2d.map((a) => d3.max(a)));
 
         if      (min >= 0) { min = 0; }
         else if (max <= 0) { max = 0; }
@@ -413,6 +415,7 @@ function Braid(samples_by_genes_matrix, gene_sets, classes) {
             .attr("id", d => d.id)
             .text((d) => d.gene)
             .attr("font-family", "sans-serif")
+            .style("font-weight", 300)
             .style("cursor", "pointer")
             .style("text-anchor", "middle")
             .attr("x", 0) // (x_pos(0) + x_neg(0)) / 2)
@@ -530,12 +533,22 @@ function Braid(samples_by_genes_matrix, gene_sets, classes) {
         halo_opacity = halo_opacity_;
 
 
+        g.selectAll(".text").on("click", null);
+
         if (line_coloring_system === 'zscore_stddev' || line_coloring_system === 'zscore_mad') {
-            lines_color_by = ordered_gene_wise[0].gene;
-            // g.selectAll(".axis") // bind click events?
+
+            g.selectAll(".text").style("font-weight", 300).on("click", function(d) { style({lines_color_by_: d.id}); });
+
+            if (!_(ordered_gene_wise).findWhere({'gene': lines_color_by})) { lines_color_by = ordered_gene_wise[1].id }
+
+            d3.select('.text#'+lines_color_by).style("font-weight", 700);
+
         } else if (line_coloring_system === 'class') {
+
             lines_color_by = categories[0];
+
         } else if (line_coloring_system === 'pc1') {
+
             pc1_colors = d3.scaleLinear().domain(samples_pc1_domain).range([negative_color, positive_color]);
         }
 
