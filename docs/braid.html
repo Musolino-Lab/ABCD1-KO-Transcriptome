@@ -65,6 +65,11 @@
             top: -2px;
         }
 
+        input[type="range"] {
+            position: relative;
+            top: 3px;
+        }
+
         [contenteditable=true]:empty:before {
             content: attr(placeholder);
             display: block; /* For Firefox */
@@ -150,7 +155,7 @@
                         <div class="tab-pane card-body fade" id="style" role="tabpanel">
                             <div>
                                 <label for="radius">Axis Spacing</label>
-                                <input type="range" id="gene_spacing" name="" min="30" max="150" step="1" value="50" style="position: relative; top: 3px;">
+                                <input type="range" id="axis_spacing" name="" min="30" max="250" step="1" value="50">
                             </div>
 
                             <br>
@@ -162,11 +167,11 @@
                             <br>
                             <div>
                                 <label for="radius">Point Radius</label>
-                                <input type="range" id="radius" name="" min="2" max="20" step="0.1" value="2" style="position: relative; top: 3px;">
+                                <input type="range" id="radius" name="" min="2" max="20" step="0.1" value="2">
                             </div>
                             <div>
                                 <label for="point_opacity">Point Opacity</label>
-                                <input type="range" id="point_opacity" name="" min="0.1" max="10" step="0.1" value="1" style="position: relative; top: 3px;">
+                                <input type="range" id="point_opacity" name="" min="0.1" max="10" step="0.1" value="1">
                             </div>
 
                             <br>
@@ -209,19 +214,19 @@
                             <br>
                             <div>
                                 <label for="line_width">Line Width</label>
-                                <input type="range" id="line_width" name="" min="0.1" max="10" step="0.1" value="1" style="position: relative; top: 3px;">
+                                <input type="range" id="line_width" name="" min="0.1" max="10" step="0.1" value="1">
                             </div>
                             <div>
                                 <label for="line_opacity">Line Opacity</label>
-                                <input type="range" id="line_opacity" name="" min="0.01" max="1" step="0.01" value="1" style="position: relative; top: 3px;">
+                                <input type="range" id="line_opacity" name="" min="0.01" max="1" step="0.01" value="1">
                             </div>
                             <div>
                                 <label for="halo_width">Halo Width</label>
-                                <input type="range" id="halo_width" name="" min="3" max="40" step="1" value="20" style="position: relative; top: 3px;">
+                                <input type="range" id="halo_width" name="" min="3" max="40" step="1" value="20">
                             </div>
                             <div>
                                 <label for="halo_opacity">Halo Opacity</label>
-                                <input type="range" id="halo_opacity" name="" min="0" max="0.6" step="0.01" value="0.1" style="position: relative; top: 3px;">
+                                <input type="range" id="halo_opacity" name="" min="0" max="0.6" step="0.01" value="0.1">
                             </div>
 
                         </div>
@@ -311,7 +316,7 @@ $("#scaling input:radio").change(               function () { braid.render({'sca
 $("#sorting input:radio").change(               function () { braid.order({'sorting_': this.value}); braid.render(); refresh_genes(); });
 $("#show_legends").change(                      function () { braid.style({'show_legends_': this.checked}) });
 
-$("#gene_spacing").change(                      function () { braid.render({'gene_spacing_': parseInt(this.value)}) });
+$("#axis_spacing").change(                      function () { braid.render({'axis_spacing_': parseInt(this.value)}) });
 $("#show_points").change(                       function () { braid.style({'show_points_': this.checked}) });
 $("#radius").change(                            function () { braid.style({'point_radius_': parseFloat(this.value)}) });
 $("#point_opacity").change(                     function () { braid.style({'point_opacity_': parseFloat(this.value)}) });

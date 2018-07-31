@@ -3,6 +3,7 @@
 let range = n => [...Array(n).keys()];
 let round_to_power_of_10 = v => Math.pow(10, Math.ceil(Math.log10(Math.abs(v)))) * Math.pow(-1, v < 0);
 let powerOfTen = (d) => d / Math.pow(10, Math.ceil(Math.log(d) / Math.LN10 - 1e-12)) === 1;
+let clamp = (min, max) => ((x) => Math.min(Math.max(x, min), max));
 
 
 function Braid(samples_by_genes_matrix, gene_sets, classes) {
@@ -81,7 +82,7 @@ function Braid(samples_by_genes_matrix, gene_sets, classes) {
     var line_opacity = 1.0;
     var halo_width = 20;
     var halo_opacity = 0.1;
-    var gene_spacing = 50;
+    var axis_spacing = 50;
     var max_point_radius = 20;
     var show_legends = false;
 
@@ -155,7 +156,7 @@ function Braid(samples_by_genes_matrix, gene_sets, classes) {
     var samples_pc1 = [];
 
     var x_scales = {};
-    var y = (index) => gene_spacing*index;
+    var y = (index) => axis_spacing*index;
 
     function idFunc(d) { return d ? d.id : this.id; }
 
@@ -359,11 +360,11 @@ function Braid(samples_by_genes_matrix, gene_sets, classes) {
 
     function render({scaling_=scaling,
                      show_averages_=show_averages,
-                     gene_spacing_=gene_spacing}={}) {
+                     axis_spacing_=axis_spacing}={}) {
 
         if (scaling_ !== scaling) { scaling = scaling_; recompute_domains_and_ranges(); }
         show_averages = show_averages_;
-        gene_spacing = gene_spacing_;
+        axis_spacing = axis_spacing_;
 
         title.text(gene_set_name);
 
@@ -401,8 +402,10 @@ function Braid(samples_by_genes_matrix, gene_sets, classes) {
             // gene symbols which are staying get re-arranged
             // dots which are staying get re-arranged
         if (axes.size() > 0) {
+            axes.order()
             axes.transition(t_last).attr("transform", (d, i) => "translate(0," + y(i) + ")");
             axes.transition(t_last).selectAll('.sub').each(function (d) { d3.select(this).call(d3.axisBottom(d[1])) } );
+            dots.order()
             dots.transition(t_last).attr("transform", (d, i) => "translate(0," + (y(i) - max_point_radius) + ")")
             dots.transition(t_last).selectAll('.dot').attr("cx", (d) => x_scales[d.gene](d[values]) );
             t_last = t_last.transition().duration(500);
@@ -614,15 +617,40 @@ function Braid(samples_by_genes_matrix, gene_sets, classes) {
         g.selectAll(".halo").transition().duration(100).style('stroke-opacity', 0);
     }
     function drag_axis(d) {
+        dragged_index = _(ordered_gene_wise).findIndex((gene) => gene.id === d[0]);
+
+        let expr = (current_index) => {
+            if (current_index < dragged_index) {
+                if (current_index < ((d3.event.y-axis_spacing/2) / axis_spacing)) {
+                        return y(current_index);
+                    } else {
+                        return y(current_index) + axis_spacing;
+                    }
+            } else {  // current_index >= dragged_index
+                if (current_index < ((d3.event.y+axis_spacing/2) / axis_spacing)) {
+                        return y(current_index) - axis_spacing;
+                    } else {
+                        return y(current_index);
+                    }
+            }
+        }
+
+        g.selectAll(".axis").attr("transform", function(d, i) { return "translate(0," +  expr( i ) + ")" });
+        g.selectAll(".dots").attr("transform", function(d, i) { return "translate(0," + (expr( i ) - max_point_radius) + ")" });
+
         d3.select(this).attr("transform", "translate(0," + d3.event.y + ")");
         d3.select(".dots#"+d[0]).attr("transform", (d, i) => "translate(0," + (d3.event.y - max_point_radius) + ")");
 
-        // if I've crossed an axis, move that axis.
-
-        // ordered_gene_wise
     }
     function drag_axis_end(d) {
-        // set in stone the new order
+
+        dragged_index = _(ordered_gene_wise).findIndex((gene) => gene.id === d[0]);
+        old_index = dragged_index;
+        new_index = clamp(0, ordered_gene_wise.length)(Math.round(d3.event.y / axis_spacing));
+
+        ordered_gene_wise.splice(new_index, 0, ordered_gene_wise.splice(old_index, 1)[0]);
+        sample_wise.forEach((sample) => sample.genes.splice(new_index, 0, sample.genes.splice(old_index, 1)[0]));
+
         render();
 
     }
