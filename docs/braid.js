@@ -751,7 +751,7 @@ function Braid(samples_by_genes_matrix, gene_sets, classes) {
 
         get_sorted_gene_list: () => ordered_gene_wise.length ? _(ordered_gene_wise).pluck('gene') : _(gene_wise).pluck('gene'),
 
-        set_reordering: (boolean) => reordering = boolean,
+        set_reordering: (reordering_) => { reordering = reordering_; if (reordering) { order(); render(); } },
     }
 
 }

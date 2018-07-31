@@ -7,7 +7,7 @@
 
     <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css" integrity="sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm" crossorigin="anonymous">
     <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css">
-    <!-- <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/awesomplete/1.1.2/awesomplete.css" /> -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/awesomplete/1.1.2/awesomplete.css" />
 
     <style type="text/css">
         h1 { font-weight: 100; }
@@ -20,14 +20,14 @@
         }
 
         .go-picker {
-            width: 590px;
+            width: 390px;
             margin: 30px;
             z-index: 1000;
             transition: 0.4s transform ease-out;
         }
 
         .go-picker.hidden {
-            transform: translate(-550px);
+            transform: translate(-350px);
         }
 
         .fa:before {
@@ -45,6 +45,35 @@
             transform: rotate(180deg);
         }
 
+        .awesomplete {
+            display: block !important;
+        }
+        .link-unstyled, .link-unstyled:link {
+            color: inherit;
+            text-decoration: inherit;
+        }
+        .link-unstyled:hover {
+            text-decoration: inherit;
+        }
+        label {
+            font-weight: 600;
+            margin-bottom: 0px;
+        }
+        input[type="checkbox"] {
+            margin-right: 5px;
+            position: relative;
+            top: -2px;
+        }
+
+        input[type="range"] {
+            position: relative;
+            top: 3px;
+        }
+
+        [contenteditable=true]:empty:before {
+            content: attr(placeholder);
+            display: block; /* For Firefox */
+        }
 
     </style>
 
@@ -63,10 +92,63 @@
                 <div class="card">
                     <div class="card-header">
                         <a class="pull-right" role="button"><i class="fa" id="hide-show"></i></a>
-                        <h1>ABCD1-knockout transcriptome</h1>
+                        <h1><a href="index.html" class="link-unstyled">Heatmap</a></h1>
                         <p><a id="download" href="#">Download SVG</a></p>
+
+                        <nav>
+                            <div class="nav nav-tabs card-header-tabs" role="tablist">
+                                <a data-toggle="tab" role="tab" class="nav-item nav-link active" href="#geneset">Gene Set</a>
+                                <a data-toggle="tab" role="tab" class="nav-item nav-link" href="#genes">Genes</a>
+                                <a data-toggle="tab" role="tab" class="nav-item nav-link" href="#structure">Structure</a>
+                                <a data-toggle="tab" role="tab" class="nav-item nav-link" href="#style">Style</a>
+                            </div>
+                        </nav>
+
                     </div>
-                    <div class="card-body">
+                    <div class="tab-content">
+                        <div class="tab-pane card-body fade show active" id="geneset" role="tabpanel">
+                            <input class="form-control" id="chooseGeneSet" placeholder="Choose a Gene Set..." />
+                        </div>
+
+
+                        <div class="tab-pane card-body fade" id="genes" role="tabpanel">
+                            <div contenteditable="true" class="form-control" id="chooseGenes" placeholder="Choose Genes..."></div>
+                        </div>
+
+
+                        <div class="tab-pane card-body fade" id="structure" role="tabpanel">
+                            <div><input type="checkbox" id="reordering" value="reordering" checked><label> Reset Gene Order on each change. </label></div>
+
+                            <br>
+                            <div>
+                                <label style="display: inline" for="minimum_nonzero">Only Show a Gene if at least <span id="X">0</span> samples have a non-zero value.</label>
+                                <input type="range" id="minimum_nonzero" name="" min="0" max="10" step="1" value="0" style="position: relative; top: 3px; display: inline" onchange="$('#X').text(this.value)">
+                            </div>
+
+                            <br>
+                            <div id="values">
+                                <label>Show Gene Values of</label>
+                                <div class="form-check"><input class="form-check-input" type="radio" name="values" value="counts" checked> Normalized Counts</div>
+                                <div class="form-check"><input class="form-check-input" type="radio" name="values" value="zscore_stddev"> Z-Scores (Standard Deviations)</div>
+                                <div class="form-check"><input class="form-check-input" type="radio" name="values" value="zscore_mad"> Z-Scores (Mean Absolute Deviation)</div>
+                            </div>
+
+                            <br>
+                            <div id="sorting">
+                                <label>Sort Genes by</label>
+                                <div class="form-check"><input class="form-check-input" type="radio" name="sorting" value="complete" checked> Complete-Linkage Hierarchical Clustering and Optimal Leaf Ordering</div>
+                                <div class="form-check"><input class="form-check-input" type="radio" name="sorting" value="pc1"> Principal Component 1 of genes in sample space</div>
+                            </div>
+                        </div>
+
+                        <div class="tab-pane card-body fade" id="style" role="tabpanel">
+                            <div><input type="checkbox" id="show_legends" value="show_legends"><label> Show legends </label></div>
+
+                            <br>
+                            Along <input type="color" value="#0000cc" id="negative_color"> <input type="color" value="#c0c0c0" id="middle_color"> <input type="color" value="#cc0000" id="positive_color">
+
+
+                        </div>
 
                     </div>
                 </div>
@@ -77,192 +159,98 @@
 
 
     <script src="https://code.jquery.com/jquery-3.2.1.slim.min.js" integrity="sha384-KJ3o2DKtIkvYIK3UENzmM7KCkRr/rE9/Qpg6aAZGJwFDMVNA/GpGFF93hXpG5KkN" crossorigin="anonymous"></script>
-    <!-- <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.12.9/umd/popper.min.js" integrity="sha384-ApNbgh9B+Y1QKtv3Rn7W3mgPxhU9K/ScQsAP7hUibX39j7fakFPskvXusvfa0b4Q" crossorigin="anonymous"></script> -->
-    <!-- <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/js/bootstrap.min.js" integrity="sha384-JZR6Spejh4U02d8jOt6vLEHfe/JQGiRRSQQxSfFWpi1MquVdAyjUar5+76PVCmYl" crossorigin="anonymous"></script> -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.12.9/umd/popper.min.js" integrity="sha384-ApNbgh9B+Y1QKtv3Rn7W3mgPxhU9K/ScQsAP7hUibX39j7fakFPskvXusvfa0b4Q" crossorigin="anonymous"></script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/js/bootstrap.min.js" integrity="sha384-JZR6Spejh4U02d8jOt6vLEHfe/JQGiRRSQQxSfFWpi1MquVdAyjUar5+76PVCmYl" crossorigin="anonymous"></script>
 
-    <script type="text/javascript" src="https://d3js.org/d3.v4.min.js"></script>
+    <script type="text/javascript" src="https://d3js.org/d3.v5.min.js"></script>
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/d3-legend/2.25.6/d3-legend.min.js"></script>
 
-    <!-- <script src="https://cdnjs.cloudflare.com/ajax/libs/awesomplete/1.1.2/awesomplete.js"></script> -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/underscore.js/1.9.1/underscore-min.js"></script>
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/awesomplete/1.1.2/awesomplete.js"></script>
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/underscore.js/1.9.1/underscore-min.js"></script>
+
+    <script type="text/javascript" src="reorder.js"></script>
+    <script type="text/javascript" src="heatmap.js"></script>
+    <script type="text/javascript" src="variables.js"></script>
 
     <script type="text/javascript">
 
-/////////////////////////////////////////////////////////////////////////////
-                    ///////    Helper Functions    ///////
-/////////////////////////////////////////////////////////////////////////////
-
-let range = n => [...Array(n).keys()];
-
-let nWise = (n, array) => {
-  iterators = Array(n).fill().map(() => array[Symbol.iterator]());
-  iterators.forEach((it, index) => Array(index).fill().forEach(() => it.next()));
-  return Array(array.length - n + 1).fill().map(() => (iterators.map(it => it.next().value)));
-};
-
-let pairWise = (array) => nWise(2, array);
-
-function flatten(array) {
-  return array.reduce(function (flat, toFlatten) {
-    return flat.concat(Array.isArray(toFlatten) ? flatten(toFlatten) : toFlatten);
-  }, []);
+class_categories = _.uniq(_.flatten(Object.values(classes).map(obj => Object.keys(obj))));
+if (class_categories.length === 0) { $(".form-check-input[value='class']").remove(); }
+else {
+    class_categories.forEach(function(key) {
+        $(".category").append($("<option></option>").attr("value", key.toString().replace(/\W/g,'')).text(key.toString()));
+    });
 }
 
-function isNumber(n) {
-    return !isNaN(parseFloat(n)) && isFinite(n);
-}
+$("#minimum_nonzero").attr('max', Object.keys(human).length);
 
-/////////////////////////////////////////////////////////////////////////////
-                      ///////    Variables    ///////
-/////////////////////////////////////////////////////////////////////////////
+heatmap = Heatmap(human, gene_sets, classes);
 
-var patient_from_col = [];
-var gene_from_row = [];
-var col_from_patient = {};
-var row_from_gene = {};
-var data = [];
 
-var w = window.innerWidth;
-var h = window.innerHeight;
-
-var low_color = "blue";
-var center_color = "black";
-var high_color = "red";
-
-var cell_height = 1;
-
-var canvas = d3.select('#graph-container').append('canvas').attr('width', w).attr('height', h);
-canvas.on("wheel.zoom", pan);
-
-var context = canvas.node().getContext('2d');
-
-var detachedContainer = document.createElement("custom");
-var dataContainer = d3.select(detachedContainer);
-
-var currentTransform = d3.zoomIdentity;
+let equal = (a1, a2) => a1.length === a2.length && a1.every((value, i) => value === a2[i]);
 
 
 /////////////////////////////////////////////////////////////////////////////
-                      ///////    Bind Data    ///////
+             ///////    Select Gene Set / Genes   ///////
 /////////////////////////////////////////////////////////////////////////////
 
-d3.json('human_counts.json', function(human_counts) {
+var chooseGeneSet = document.getElementById("chooseGeneSet");
+var chooseGeneSetform = new Awesomplete(chooseGeneSet, {
+    list: Object.entries(gene_sets),
+    maxItems: 30,
+    replace: function (text) { this.input.value = text.label; }
+});
 
-    patient_from_col = Object.keys(human_counts);
-    num_patients = patient_from_col.length;
-    gene_from_row = Object.keys(human_counts[patient_from_col[0]]);
-    num_genes = gene_from_row.length;
+chooseGenes = $('#chooseGenes');
+function refresh_genes() { chooseGenes.text(heatmap.get_sorted_gene_list().join(", ")); }
 
-    col_from_patient = _.object(patient_from_col, _.range(num_patients));
-    row_from_gene =  _.object(gene_from_row, _.range(num_genes));
-
-    data = _.chain(human_counts)
-             .mapObject((genes, patient) =>
-                _.chain(genes).mapObject((value, gene) => {return {
-                     'patient_index': col_from_patient[patient],
-                     'gene_index': row_from_gene[gene],
-                     'count': value,
-                }}).values().value())
-            .values().flatten().value();
-            // .filter(not_null);
-
-
-    [c_min, c_max] = d3.extent(data, d => d.count);
-    var color = d3.scaleLinear().domain([0, c_max])
-                            .range([center_color, high_color]);
-
-    var x = d3.scaleLinear().domain([0, num_patients]).range([0, w/2]);
-    var y = d3.scaleLinear().domain([0, num_genes]).range([0, num_genes * cell_height * 3]);
-
-
-    var rect = dataContainer.selectAll('custom.rect');
-
-    rect = rect.data(data)
-        .enter()
-        .append('custom')
-        .attr('class', 'rect')
-        .attr('x', d => x(d.patient_index))
-        .attr('y', d => y(d.gene_index))
-        .attr('width', d => 100)
-        .attr('height', d => cell_height)
-        .attr('fillStyle', d => color(d.count) );
-
-    drawCanvas();
-
+chooseGeneSet.addEventListener('awesomplete-selectcomplete', function(e) {
+    selected_gene_set_name = e.text.label;
+    selected_genes = e.text.value;
+    heatmap.restart({'selected_gene_set_name':selected_gene_set_name, 'selected_genes':selected_genes});
+    refresh_genes();
 });
 
 
-
-
-/////////////////////////////////////////////////////////////////////////////
-                      ///////    Draw Chart    ///////
-/////////////////////////////////////////////////////////////////////////////
-
-function drawCanvas() {
-
-    context.clearRect(0, 0, w, h);
-    context.fillStyle = '#fff';
-    context.fillRect(0, 0, w, h);
-
-    dataContainer.selectAll('custom.rect').each(function(d, i) {
-        var node = d3.select(this);
-
-        context.beginPath();
-        context.fillStyle = node.attr("fillStyle");
-        context.rect(node.attr("x"), node.attr("y"), node.attr("width"), node.attr("height"));
-        context.fill();
-        context.closePath();
-    });
-
-    console.log('drawCanvas');
-
+function manual_gene_list_edit(e) {
+    new_list = $(this).text().split(/[\s,;\t\n]+/).filter(n => n);
+    if (!equal(new_list, heatmap.get_sorted_gene_list())) {
+        heatmap.restart({'selected_gene_set_name':'', 'selected_genes':new_list});
+        refresh_genes();
+    }
 }
+manual_gene_list_edit_debounced = _.debounce(manual_gene_list_edit, 1000)
+chooseGenes.on('input', manual_gene_list_edit_debounced);
 
+// d3.on("drag", refresh_genes());
 
 /////////////////////////////////////////////////////////////////////////////
-                      ///////   Zoom & Resize    ///////
+                 ///////    Style Figure    ///////
 /////////////////////////////////////////////////////////////////////////////
 
+$("#reordering").change(                        function () { heatmap.set_reordering(this.checked) });
+$("#minimum_nonzero").change(                   function () { heatmap.order({'minimum_nonzero_': parseInt(this.value)}); heatmap.render(); refresh_genes(); });
+$("#values input:radio").change(                function () { heatmap.order({'values_': this.value}); heatmap.render(); refresh_genes(); });
+$("#sorting input:radio").change(               function () { heatmap.order({'sorting_': this.value}); heatmap.render(); refresh_genes(); });
 
-
-// function zoomed() {
-//     console.log('zoomed');
-//     context.save();
-//     context.clearRect(0, 0, w, h);
-//     currentTransform = d3.event.transform;
-//     context.translate(currentTransform.x, currentTransform.y);
-//     context.scale(currentTransform.k, currentTransform.k);
-//     drawCanvas();
-//     context.restore();
-// }
-
-function pan() {
-    console.log('pan');
-    context.save();
-    context.clearRect(0, 0, w, h);
-    console.log(d3.event.wheelDeltaX, d3.event.wheelDeltaY);
-    // currentTransform.x += d3.event.wheelDeltaX;
-    currentTransform.y += d3.event.wheelDeltaY;
-    context.translate(0, currentTransform.y);
-    // context.translate(currentTransform.x, currentTransform.y);
-    drawCanvas();
-    context.restore();
-}
+$("#show_legends").change(                      function () { heatmap.style({'show_legends_': this.checked}) });
+$("#negative_color").change(                    function () { heatmap.style({'negative_color_': this.value}) });
+$("#middle_color").change(                      function () { heatmap.style({'middle_color_': this.value}) });
+$("#positive_color").change(                    function () { heatmap.style({'positive_color_': this.value}) });
 
 
 /////////////////////////////////////////////////////////////////////////////
                  ///////    Download SVG    ///////
 /////////////////////////////////////////////////////////////////////////////
 
+d3.select("#download").on("click", function() {
 
-// d3.select("#download").on("click", function() {
-
-//     d3.select(this)
-//       .attr("href", 'data:application/octet-stream;base64,' + btoa(unescape(encodeURIComponent(d3.select("#graph-container").html()))))
-//       .attr("download", "plot.svg")
-// })
+    d3.select(this)
+      .attr("href", 'data:application/octet-stream;base64,' + btoa(unescape(encodeURIComponent(d3.select("#graph-container").html()))))
+      .attr("download", "plot.svg")
+})
 
 $('#hide-show').click(function(e) { $('.go-picker').toggleClass('hidden'); });
-
 
 
     </script>
