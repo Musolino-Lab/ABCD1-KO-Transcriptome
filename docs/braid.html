@@ -303,6 +303,7 @@ function manual_gene_list_edit(e) {
 manual_gene_list_edit_debounced = _.debounce(manual_gene_list_edit, 1000)
 chooseGenes.on('input', manual_gene_list_edit_debounced);
 
+// d3.on("drag", refresh_genes());
 
 /////////////////////////////////////////////////////////////////////////////
                  ///////    Style Figure    ///////

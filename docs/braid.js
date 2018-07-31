@@ -436,6 +436,11 @@ function Braid(samples_by_genes_matrix, gene_sets, classes) {
                 .attr("dy", "1em")
                 .on("click", (d) => line_coloring_system[0] === 'z' ? style({lines_color_by_: d.id}) : GeneCards(d))
             .select(function() { return this.parentNode; })
+                .append("g")
+                .attr("class", "brush")
+                .attr("id", d => d.id)
+                .each(function (d) { d3.select(this).call(d3.brushX().extent([[50,-10],[h,10]]).on("start", brushstart).on("brush", brush).on("end", brushend) ) })
+            .select(function() { return this.parentNode; })
                 .style("opacity", 0)
                 .transition(t_last)
                     .style("opacity", 1);
@@ -612,10 +617,15 @@ function Braid(samples_by_genes_matrix, gene_sets, classes) {
 
     }
 
+
+    /////////////////////////////////////////////////////////////////////////////
+                          ///////    Drag Axes    ///////
+    /////////////////////////////////////////////////////////////////////////////
+
     function drag_axis_start(d) {
-        g.selectAll(".line").transition().duration(100).style('stroke-opacity', 0);
-        g.selectAll(".halo").transition().duration(100).style('stroke-opacity', 0);
+        g.selectAll(".line,.halo").transition().duration(100).style('stroke-opacity', 0);
     }
+
     function drag_axis(d) {
         dragged_index = _(ordered_gene_wise).findIndex((gene) => gene.id === d[0]);
 
@@ -635,13 +645,14 @@ function Braid(samples_by_genes_matrix, gene_sets, classes) {
             }
         }
 
-        g.selectAll(".axis").attr("transform", function(d, i) { return "translate(0," +  expr( i ) + ")" });
-        g.selectAll(".dots").attr("transform", function(d, i) { return "translate(0," + (expr( i ) - max_point_radius) + ")" });
+        g.selectAll(".axis").attr("transform", function(d, i) { return "translate(0," +  expr(i) + ")" });
+        g.selectAll(".dots").attr("transform", function(d, i) { return "translate(0," + (expr(i) - max_point_radius) + ")" });
 
         d3.select(this).attr("transform", "translate(0," + d3.event.y + ")");
         d3.select(".dots#"+d[0]).attr("transform", (d, i) => "translate(0," + (d3.event.y - max_point_radius) + ")");
 
     }
+
     function drag_axis_end(d) {
 
         dragged_index = _(ordered_gene_wise).findIndex((gene) => gene.id === d[0]);
@@ -653,6 +664,43 @@ function Braid(samples_by_genes_matrix, gene_sets, classes) {
 
         render();
 
+    }
+
+    /////////////////////////////////////////////////////////////////////////////
+                          ///////    Brush Axes    ///////
+    /////////////////////////////////////////////////////////////////////////////
+
+
+    function brushstart() { g.selectAll(".line,.halo").on("mouseover mouseout", null); }
+
+    function brush(d) {
+
+        console.log(d[0], d3.event.selection);
+
+        // g.selectAll(".brush").each(function(d) { return console.log(d[0], d3.brushSelection(this)) });
+
+          // // Handles a brush event, toggling the display of foreground lines.
+          // function brush() {
+          //   var actives = dimensions.filter(function(p) { return !y[p].brush.empty(); }),
+          //   extents = actives.map(function(p) { return y[p].brush.extent(); });
+          //   foreground.style("display", function(d) {
+          //     return actives.every(function(p, i) {
+          //       return extents[i][0] <= d[p] && d[p] <= extents[i][1];
+          //     }) ? null : "none";
+          //   });
+          // }
+
+        // console.log(d[0], d3.event.selection);
+
+    }
+    function brushend(d) {
+
+        if (d3.event.selection === null) {
+            console.log(d[0], d3.event.selection);
+        }
+
+        // g.selectAll(".line,.halo").on("mouseover", setFocus);
+        // g.selectAll(".line,.halo").on("mouseout", removeFocus);
     }
 
     function setFocus(d) {
