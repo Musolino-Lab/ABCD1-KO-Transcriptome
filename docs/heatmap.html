@@ -207,7 +207,7 @@ function refresh_genes() { chooseGenes.text(heatmap.get_sorted_gene_list().join(
 chooseGeneSet.addEventListener('awesomplete-selectcomplete', function(e) {
     selected_gene_set_name = e.text.label;
     selected_genes = e.text.value;
-    heatmap.restart({'selected_gene_set_name':selected_gene_set_name, 'selected_genes':selected_genes});
+    heatmap.restart({'selected_gene_groups_':[{'gene_set_name':selected_gene_set_name, 'genes':selected_genes}]});
     refresh_genes();
 });
 
@@ -215,7 +215,7 @@ chooseGeneSet.addEventListener('awesomplete-selectcomplete', function(e) {
 function manual_gene_list_edit(e) {
     new_list = $(this).text().split(/[\s,;\t\n]+/).filter(n => n);
     if (!equal(new_list, heatmap.get_sorted_gene_list())) {
-        heatmap.restart({'selected_gene_set_name':'', 'selected_genes':new_list});
+        heatmap.restart({'selected_gene_groups_':[{'gene_set_name': 'Genes', 'genes': new_list}]});
         refresh_genes();
     }
 }
