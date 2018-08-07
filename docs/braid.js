@@ -404,10 +404,10 @@ function Braid(samples_by_genes_matrix, gene_sets, classes) {
         if (axes.size() > 0) {
             axes.order()
             axes.transition(t_last).attr("transform", (d, i) => "translate(0," + y(i) + ")");
-            axes.transition(t_last).selectAll('.sub').each(function (d) { d3.select(this).call(d3.axisBottom(d[1])) } );
+            axes.each(function (d) { d3.select(this).select('.sub').transition(t_last).call(d3.axisBottom(d[1])) });
             dots.order()
             dots.transition(t_last).attr("transform", (d, i) => "translate(0," + (y(i) - max_point_radius) + ")")
-            dots.transition(t_last).selectAll('.dot').attr("cx", (d) => x_scales[d.gene](d[values]) );
+            dots.selectAll('.dot').transition(t_last).attr("cx", (d) => x_scales[d.gene](d[values]) );
             t_last = t_last.transition().duration(500);
         }
 
@@ -481,6 +481,7 @@ function Braid(samples_by_genes_matrix, gene_sets, classes) {
             .style("stroke", (d) => line_colors[line_coloring_system](d))
             .style("stroke-width", line_width)
             .style("stroke-opacity", 0)
+            .style("cursor", "pointer")
             .merge(line)
             .on("mouseover", setFocus)
             .on("mouseout", removeFocus)
@@ -499,6 +500,7 @@ function Braid(samples_by_genes_matrix, gene_sets, classes) {
             .style("stroke-linejoin", "round")
             .style("stroke-width", halo_width)
             .style("stroke-opacity", 0)
+            .style("cursor", "pointer")
             .merge(halo)
             .on("mouseover", setFocus)
             .on("mouseout", removeFocus)
