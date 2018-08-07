@@ -322,12 +322,12 @@ chooseGenes.on('input', manual_gene_list_edit_debounced);
 function values_scaling_radio_conflict() {
 
     if ($('input[name=scaling]:checked', '#structure').val() == 'log') {
-        $('input[value=zscore_stddev]').attr('disabled', true);
-        $('input[value=zscore_mad]').attr('disabled', true);
+        $('input[name=values][value=zscore_stddev]').attr('disabled', true);
+        $('input[name=values][value=zscore_mad]').attr('disabled', true);
     } else { $('input[name=values]').attr('disabled', false); }
 
     if ($('input[name=values]:checked', '#structure').val()[0] == 'z') {
-        $('input[value=log]').attr('disabled', true);
+        $('input[name=scaling][value=log]').attr('disabled', true);
     } else { $('input[name=scaling]').attr('disabled', false); }
 
 }
