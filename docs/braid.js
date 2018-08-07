@@ -404,7 +404,7 @@ function Braid(samples_by_genes_matrix, gene_sets, classes) {
         if (axes.size() > 0) {
             axes.order()
             axes.transition(t_last).attr("transform", (d, i) => "translate(0," + y(i) + ")");
-            axes.each(function (d) { d3.select(this).select('.sub').transition(t_last).call(d3.axisBottom(d[1])) });
+            axes.each(function (d) { d3.select(this).select('.sub').call(d3.axisBottom(d[1])) });
             dots.order()
             dots.transition(t_last).attr("transform", (d, i) => "translate(0," + (y(i) - max_point_radius) + ")")
             dots.selectAll('.dot').transition(t_last).attr("cx", (d) => x_scales[d.gene](d[values]) );
@@ -445,7 +445,7 @@ function Braid(samples_by_genes_matrix, gene_sets, classes) {
                 .transition(t_last)
                     .style("opacity", 1);
 
-        if (scaling === 'log') { d3.selectAll(".tick text").text(null).filter(powerOfTen).text(10).append("tspan").attr("dy", "-.7em").text(function(d) { return Math.round(Math.log(d) / Math.LN10); }); };
+        if (scaling === 'log') { d3.selectAll(".tick text").text(null).filter(powerOfTen).text(10).append("tspan").attr("dy", "-.7em").text(function(d) { return Math.round(Math.log(d) / Math.LN10); }); }
 
         dots.enter()
             .append("g")
