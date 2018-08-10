@@ -33,8 +33,8 @@ function Braid(samples_by_genes_matrix, gene_sets, classes) {
 
     var margin = {top: 100, right: 100, bottom: 0, left: 100};
 
-    var w = window.innerWidth - (margin.left + margin.right);
-    var h = window.innerHeight - (margin.top + margin.bottom);
+    var w = $("#graph-container").innerWidth() - (margin.left + margin.right);
+    var h = $("#graph-container").innerHeight() - (margin.top + margin.bottom);
 
     var values = 'counts';
     var show_averages = false;
@@ -143,7 +143,7 @@ function Braid(samples_by_genes_matrix, gene_sets, classes) {
     /////////////////////////////////////////////////////////////////////////////
 
     var svg = d3.select("#graph-container").append("svg").attr("xmlns", "http://www.w3.org/2000/svg").attr("xmlns:xlink", "http://www.w3.org/1999/xlink");
-    var g = svg.append("g").attr("transform", "translate("+margin.left+","+margin.top+")");
+    var g = svg.append("g");
     svg.style("cursor", "move");
 
     var gene_set_name = "";
@@ -730,16 +730,30 @@ function Braid(samples_by_genes_matrix, gene_sets, classes) {
                           ///////   Zoom & Resize    ///////
     /////////////////////////////////////////////////////////////////////////////
 
-    svg.call(d3.zoom()
-               .scaleExtent([1 / 8, 8])
-               .on("zoom", zoomed));
+    svg.call(d3.zoom().on("zoom", zoomed)).on("wheel.zoom", wheeled);
 
-    function zoomed() { g.attr("transform", d3.event.transform); }
+    transform = d3.zoomTransform(g);
+    transform.x += margin.left;
+    transform.y += margin.top;
+    g.attr("transform", transform);
+
+    function zoomed() {
+        current_transform = d3.zoomTransform(g);
+        current_transform.x += d3.event.sourceEvent.movementX;
+        current_transform.y += d3.event.sourceEvent.movementY;
+        g.attr("transform", current_transform);
+    }
+
+    function wheeled() {
+        current_transform = d3.zoomTransform(g);
+        current_transform.y = clamp(-(axis_spacing*ordered_gene_wise.length-100) , 100)(current_transform.y - d3.event.deltaY);
+        g.attr("transform", current_transform);
+    }
 
     function resize() {
-        svg.attr("width", window.innerWidth).attr("height", window.innerHeight);
-        w = window.innerWidth - (margin.left + margin.right);
-        h = window.innerHeight - (margin.top + margin.bottom);
+        svg.attr("width", $("#graph-container").innerWidth()).attr("height", $("#graph-container").innerHeight());
+        w = $("#graph-container").innerWidth() - (margin.left + margin.right);
+        h = $("#graph-container").innerHeight() - (margin.top + margin.bottom);
     }
 
     d3.select(window).on("resize", resize)
