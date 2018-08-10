@@ -12,22 +12,29 @@
     <style type="text/css">
         h1 { font-weight: 100; }
         #graph-container {
-            top: 0;
-            bottom: 0;
-            left: 0;
-            right: 0;
-            position: fixed;
-        }
-
-        .go-picker {
-            width: 590px;
-            margin: 30px;
-            z-index: 1000;
             transition: 0.4s transform ease-out;
         }
 
-        .go-picker.hidden {
-            transform: translate(-550px);
+        .menu {
+            max-width: 490px;
+            min-width: 490px;
+            transition: 0.4s transform ease-out;
+
+        }
+        .col-12 {
+            margin: 0px;
+            padding: 0px;
+        }
+        .card {
+            min-height: 100vh;
+            border-radius: 0;
+        }
+
+        .menu.hidden {
+            transform: translate(-380px);
+        }
+        .menu.hidden + #graph-container {
+            transform: translate(-380px);
         }
 
         .awesomplete {
@@ -87,13 +94,10 @@
 </head>
 <body>
 
-
-    <div id="graph-container"></div>
-
     <div class="container-fluid">
 
-        <div class="row">
-            <div class="go-picker">
+        <div class="row flex-nowrap">
+            <div class="col-md-4 col-12 menu">
                 <div class="card">
                     <div class="card-header">
                         <a class="pull-right" role="button"><i class="fa" id="hide-show"></i></a>
@@ -136,6 +140,9 @@
                     </div>
                 </div>
             </div>
+
+            <div id="graph-container" class="col-md col-12"></div>
+
         </div>
     </div>
 
@@ -162,8 +169,8 @@ var data = Object.entries(lee).map(entry => Object.assign({'id':entry[0]}, entry
 
 var margin = {top: 100, right: 100, bottom: 100, left: 100};
 
-var w = window.innerWidth - (margin.left + margin.right);
-var h = window.innerHeight - (margin.top + margin.bottom);
+var w = $("#graph-container").innerWidth() - (margin.left + margin.right);
+var h = $("#graph-container").innerHeight() - (margin.top + margin.bottom);
 
 
 var point_size = 2;
@@ -189,7 +196,7 @@ var threshold_line_dashes = "5, 3";
 /////////////////////////////////////////////////////////////////////////////
 
 var svg = d3.select("#graph-container").append("svg").attr("xmlns", "http://www.w3.org/2000/svg").attr("xmlns:xlink", "http://www.w3.org/1999/xlink");
-var g = svg.append("g").attr("transform", "translate("+margin.left+","+margin.top+")");
+var g = svg.append("g");
 svg.style("cursor", "move");
 
 var text = g.selectAll(".text");
@@ -429,21 +436,28 @@ function restart() {
 /////////////////////////////////////////////////////////////////////////////
 
 
-svg.call(d3.zoom()
-           .scaleExtent([1 / 2, 16])
-           .on("zoom", zoomed));
+svg.call(d3.zoom().scaleExtent([1 / 2, 16]).on("zoom", zoomed));
+
+transform = d3.zoomTransform(g);
+transform.x += margin.left;
+transform.y += margin.top;
+g.attr("transform", transform);
+
 
 function zoomed() {
-    g.attr("transform", d3.event.transform);
-    tipExit();
+    current_transform = d3.zoomTransform(g);
+    current_transform.x += d3.event.sourceEvent.movementX;
+    current_transform.y += d3.event.sourceEvent.movementY;
+    current_transform.k = d3.event.transform.k;
+    g.attr("transform", current_transform);
+    tipExit()
 }
 
 
-
 function resize() {
-    svg.attr("width", window.innerWidth).attr("height", window.innerHeight);
-    w = window.innerWidth - (margin.left + margin.right);
-    h = window.innerHeight - (margin.top + margin.bottom);
+    svg.attr("width", $("#graph-container").innerWidth()).attr("height", $("#graph-container").innerHeight());
+    w = $("#graph-container").innerWidth() - (margin.left + margin.right);
+    h = $("#graph-container").innerHeight() - (margin.top + margin.bottom);
 }
 
 d3.select(window).on("resize", resize)
@@ -451,11 +465,12 @@ d3.select(window).on("resize", resize)
 resize();
 
 
+
 /////////////////////////////////////////////////////////////////////////////
                  ///////    Figure Styling    ///////
 /////////////////////////////////////////////////////////////////////////////
 
-$('#hide-show').click(function(e) { $('.go-picker').toggleClass('hidden'); });
+$('#hide-show').click(function(e) { $('.menu').toggleClass('hidden'); });
 
 
 $("#bad_logFC_bad_q_color_picker").change(function() {
