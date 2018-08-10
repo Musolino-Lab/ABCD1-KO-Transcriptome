@@ -50,6 +50,7 @@ function Braid(samples_by_genes_matrix, gene_sets, classes) {
     };
     var domains = {};
     var ranges = {};
+    var brush_selections = {};
 
     value_accessors = {
         counts: (gene) => gene.counts,
@@ -104,7 +105,7 @@ function Braid(samples_by_genes_matrix, gene_sets, classes) {
     var id_colors = d3.scaleOrdinal(d3.schemeCategory10);
     var class_colors = _.object(categories, categories.map(c => d3.scaleOrdinal(d3.schemeCategory10)));
     let color_range = (gene, attr) => {
-        samples = _.object(_(gene_wise).findWhere({'gene':gene}).samples.map(sample => [sample.sample, sample[attr]]));
+        samples = _.object(gene_wise[gene_wise_indexer[gene]].samples.map(sample => [sample.sample, sample[attr]]));
         domain = d3.extent(Object.values(samples)); domain.splice(1, 0, 0);
         scale = d3.scaleLinear().domain(domain).range([negative_color, middle_color, positive_color]);
         return [(sample) => scale(samples[sample]), scale]
@@ -250,6 +251,7 @@ function Braid(samples_by_genes_matrix, gene_sets, classes) {
                     sorting_=sorting,
                     minimum_nonzero_=minimum_nonzero}={}) {
 
+        if (values_ !== values) { brush_selections = {}; }
         values = values_;
         value_accessor = value_accessors[values];
         sorting = sorting_;
@@ -365,6 +367,7 @@ function Braid(samples_by_genes_matrix, gene_sets, classes) {
         if (scaling_ !== scaling) { scaling = scaling_; recompute_domains_and_ranges(); }
         show_averages = show_averages_;
         axis_spacing = axis_spacing_;
+        selected_samples = selectedSamples();
 
         title.text(gene_set_name);
 
@@ -405,6 +408,7 @@ function Braid(samples_by_genes_matrix, gene_sets, classes) {
             axes.order()
             axes.transition(t_last).attr("transform", (d, i) => "translate(0," + y(i) + ")");
             axes.each(function (d) { d3.select(this).select('.sub').call(d3.axisBottom(d[1])) });
+            axes.each(function (d) { d3.select(this).select('.brush').call(d3.brushX().extent([[50,-10],[h,10]]).move, (d[0] in brush_selections ? [d[1](brush_selections[d[0]][0]), d[1](brush_selections[d[0]][1])] : null))  });
             dots.order()
             dots.transition(t_last).attr("transform", (d, i) => "translate(0," + (y(i) - max_point_radius) + ")")
             dots.selectAll('.dot').transition(t_last).attr("cx", (d) => x_scales[d.gene](d[values]) );
@@ -483,10 +487,10 @@ function Braid(samples_by_genes_matrix, gene_sets, classes) {
             .style("stroke-opacity", 0)
             .style("cursor", "pointer")
             .merge(line)
-            .on("mouseover", setFocus)
+            .on("mouseover", (d) => setFocus([d.sample]))
             .on("mouseout", removeFocus)
             .transition(t_last)
-                .style("stroke-opacity", line_opacity);
+                .style("stroke-opacity", (d) => selected_samples.includes(d.sample) ? line_opacity : line_opacity*0.25);
 
         halo.enter()
             .append("path")
@@ -502,10 +506,11 @@ function Braid(samples_by_genes_matrix, gene_sets, classes) {
             .style("stroke-opacity", 0)
             .style("cursor", "pointer")
             .merge(halo)
-            .on("mouseover", setFocus)
+            .on("mouseover", (d) => setFocus([d.sample]))
             .on("mouseout", removeFocus)
             .transition(t_last)
-                .style("stroke-opacity", halo_opacity);
+                .style("stroke-opacity", (d) => selected_samples.includes(d.sample) ? halo_opacity : halo_opacity*0.1);
+
 
     }
 
@@ -673,48 +678,48 @@ function Braid(samples_by_genes_matrix, gene_sets, classes) {
     /////////////////////////////////////////////////////////////////////////////
 
 
-    function brushstart() { g.selectAll(".line,.halo").on("mouseover mouseout", null); }
+    function brushstart() {  }
 
     function brush(d) {
-
-        console.log(d[0], d3.event.selection);
-
-        // g.selectAll(".brush").each(function(d) { return console.log(d[0], d3.brushSelection(this)) });
-
-          // // Handles a brush event, toggling the display of foreground lines.
-          // function brush() {
-          //   var actives = dimensions.filter(function(p) { return !y[p].brush.empty(); }),
-          //   extents = actives.map(function(p) { return y[p].brush.extent(); });
-          //   foreground.style("display", function(d) {
-          //     return actives.every(function(p, i) {
-          //       return extents[i][0] <= d[p] && d[p] <= extents[i][1];
-          //     }) ? null : "none";
-          //   });
-          // }
-
-        // console.log(d[0], d3.event.selection);
-
+        var gene = d[0];
+        var scale = x_scales[gene];
+        var range = d3.event.selection.map(scale.invert);
+        brush_selections[gene] = range;
+        return resetFocus();
     }
+
     function brushend(d) {
+        if (d3.event.selection === null) { delete brush_selections[d[0]]; }
+        return resetFocus();
+    }
 
-        if (d3.event.selection === null) {
-            console.log(d[0], d3.event.selection);
+    function setFocus(list_of_samples) {
+        g.selectAll(".line").style('stroke-opacity', (d) => list_of_samples.includes(d.id) ? 1 :                line_opacity*0.25);
+        g.selectAll(".halo").style('stroke-opacity', (d) => list_of_samples.includes(d.id) ? halo_opacity*1.5 : halo_opacity*0.1);
+    }
+
+    function selectedSamples() {
+        return sample_wise.filter((sample) =>
+            sample.genes.every((sample_gene) => {
+                if (sample_gene.gene in brush_selections) {
+                    bounds = brush_selections[sample_gene.gene];
+                    return (bounds[0] < sample_gene.value && sample_gene.value < bounds[1]);
+                } else { return true; }
+            })
+        ).map(sample => sample.id);
+    }
+
+    function resetFocus() {
+        if (Object.keys(brush_selections).length === 0) { return removeFocus(); }
+        return setFocus(selectedSamples());
+    }
+
+    function removeFocus() {
+        if (Object.keys(brush_selections).length > 0) { return resetFocus(); }
+        else {
+            g.selectAll(".line").style('stroke-opacity', line_opacity);
+            g.selectAll(".halo").style('stroke-opacity', halo_opacity);
         }
-
-        // g.selectAll(".line,.halo").on("mouseover", setFocus);
-        // g.selectAll(".line,.halo").on("mouseout", removeFocus);
-    }
-
-    function setFocus(d) {
-        g.selectAll(".line").style('stroke-opacity', line_opacity*0.5);
-        g.selectAll(".halo").style('stroke-opacity', halo_opacity*0.25);
-        g.select(".line#"+d.id).style('stroke-opacity', 1);
-        g.select(".halo#"+d.id).style('stroke-opacity', halo_opacity*1.5);
-    }
-
-    function removeFocus(d) {
-        g.selectAll(".line").style('stroke-opacity', line_opacity);
-        g.selectAll(".halo").style('stroke-opacity', halo_opacity);
     }
 
     function GeneCards(d) { window.open("http://www.genecards.org/cgi-bin/carddisp.pl?gene="+d.id,'_blank') }
