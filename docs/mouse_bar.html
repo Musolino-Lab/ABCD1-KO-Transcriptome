@@ -12,22 +12,29 @@
     <style type="text/css">
         h1 { font-weight: 100; }
         #graph-container {
-            top: 0;
-            bottom: 0;
-            left: 0;
-            right: 0;
-            position: fixed;
-        }
-
-        .go-picker {
-            width: 590px;
-            margin: 30px;
-            z-index: 1000;
             transition: 0.4s transform ease-out;
         }
 
-        .go-picker.hidden {
-            transform: translate(-550px);
+        .menu {
+            max-width: 470px;
+            min-width: 470px;
+            transition: 0.4s transform ease-out;
+
+        }
+        .col-12 {
+            margin: 0px;
+            padding: 0px;
+        }
+        .card {
+            min-height: 100vh;
+            border-radius: 0;
+        }
+
+        .menu.hidden {
+            transform: translate(-380px);
+        }
+        .menu.hidden + #graph-container {
+            transform: translate(-380px);
         }
 
         .fa:before {
@@ -66,13 +73,10 @@
 </head>
 <body>
 
-
-    <div id="graph-container"></div>
-
     <div class="container-fluid">
 
-        <div class="row">
-            <div class="go-picker">
+        <div class="row flex-nowrap">
+            <div class="col-md-4 col-12 menu">
                 <div class="card">
                     <div class="card-header">
                         <a class="pull-right" role="button"><i class="fa" id="hide-show"></i></a>
@@ -108,6 +112,9 @@
                     </div>
                 </div>
             </div>
+
+            <div id="graph-container" class="col-md col-12"></div>
+
         </div>
     </div>
 
@@ -134,8 +141,8 @@ var mouse = {"Timp2":{"logFC":3.956,"q":211.355},"Tmbim6":{"logFC":1.991,"q":211
 
 var margin = {top: 100, right: 0, bottom: 0, left: 0};
 
-var w = window.innerWidth - (margin.left + margin.right);
-var h = window.innerHeight - (margin.top + margin.bottom);
+var w = $("#graph-container").innerWidth() - (margin.left + margin.right);
+var h = $("#graph-container").innerHeight() - (margin.top + margin.bottom);
 
 
 var bar_thickness = 20;
@@ -159,7 +166,7 @@ let is_differential = (d) => d.q > q_threshold && Math.abs(d.logFC) > fc_thresho
 /////////////////////////////////////////////////////////////////////////////
 
 var svg = d3.select("#graph-container").append("svg").attr("xmlns", "http://www.w3.org/2000/svg").attr("xmlns:xlink", "http://www.w3.org/1999/xlink");
-var g = svg.append("g").attr("transform", "translate("+margin.left+","+margin.top+")");
+var g = svg.append("g");
 svg.style("cursor", "move");
 
 var bar  = g.selectAll(".bar");
@@ -320,18 +327,32 @@ function restart(selected_gene_set_name, selected_genes) {
 /////////////////////////////////////////////////////////////////////////////
 
 
-svg.call(d3.zoom()
-           .scaleExtent([1 / 8, 8])
-           .on("zoom", zoomed));
+let clamp = (min, max) => ((x) => Math.min(Math.max(x, min), max));
 
-function zoomed() { g.attr("transform", d3.event.transform); }
+svg.call(d3.zoom().on("zoom", zoomed)).on("wheel.zoom", wheeled);
 
+transform = d3.zoomTransform(g);
+transform.x += margin.left;
+transform.y += margin.top;
+g.attr("transform", transform);
 
+function zoomed() {
+    current_transform = d3.zoomTransform(g);
+    current_transform.x += d3.event.sourceEvent.movementX;
+    current_transform.y += d3.event.sourceEvent.movementY;
+    g.attr("transform", current_transform);
+}
+
+function wheeled() {
+    current_transform = d3.zoomTransform(g);
+    current_transform.y = clamp(-(g.node().getBBox().height-window.innerHeight-100), 100)(current_transform.y - d3.event.deltaY);
+    g.attr("transform", current_transform);
+}
 
 function resize() {
-    svg.attr("width", window.innerWidth).attr("height", window.innerHeight);
-    w = window.innerWidth - (margin.left + margin.right);
-    h = window.innerHeight - (margin.top + margin.bottom);
+    svg.attr("width", $("#graph-container").innerWidth()).attr("height", $("#graph-container").innerHeight());
+    w = $("#graph-container").innerWidth() - (margin.left + margin.right);
+    h = $("#graph-container").innerHeight() - (margin.top + margin.bottom);
 }
 
 d3.select(window).on("resize", resize)
@@ -358,7 +379,7 @@ $("#degenes").click(function() {
       .attr("download", "DE_Genes.txt")
 })
 
-$('#hide-show').click(function(e) { $('.go-picker').toggleClass('hidden'); });
+$('#hide-show').click(function(e) { $('.menu').toggleClass('hidden'); });
 
 
 /////////////////////////////////////////////////////////////////////////////
