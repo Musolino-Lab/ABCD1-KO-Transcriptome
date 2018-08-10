@@ -438,7 +438,7 @@ function Braid(samples_by_genes_matrix, gene_sets, classes) {
                 .style("cursor", "pointer")
                 .style("text-anchor", "middle")
                 .attr("dy", "1em")
-                .on("click", (d) => line_coloring_system[0] === 'z' ? style({lines_color_by_: d.id}) : GeneCards(d))
+                .on("click", (d) => line_coloring_system[0] === 'z' ? style({lines_color_by_: d[0]}) : GeneCards(d[0]))
             .select(function() { return this.parentNode; })
                 .append("g")
                 .attr("class", "brush")
@@ -559,9 +559,7 @@ function Braid(samples_by_genes_matrix, gene_sets, classes) {
 
         if (line_coloring_system === 'zscore_stddev' || line_coloring_system === 'zscore_mad') {
 
-            g.selectAll(".text").style("font-weight", 300).on("click", (d) => style({lines_color_by_: d.id}));
-            if (!_(ordered_gene_wise).findWhere({'gene': lines_color_by})) { lines_color_by = ordered_gene_wise[0].id }
-            d3.select('.text#'+lines_color_by).style("font-weight", 700);
+            if (!_(ordered_gene_wise).findWhere({'gene': lines_color_by})) { lines_color_by = ordered_gene_wise[0].gene; }
 
             zscore_stddev_colors = color_range(lines_color_by, 'zscore_stddev');
             zscore_stddev_color_scale = zscore_stddev_colors[1]; zscore_stddev_colors = zscore_stddev_colors[0];
@@ -570,12 +568,15 @@ function Braid(samples_by_genes_matrix, gene_sets, classes) {
 
         } else if (line_coloring_system === 'class') {
 
-            lines_color_by = categories[0];  // TODO FIX THIS SHIT
+            if (!categories.includes(lines_color_by)) { lines_color_by = categories[0] }
 
         } else if (line_coloring_system === 'pc1') {
 
             pc1_colors = d3.scaleLinear().domain(samples_pc1_domain).range([negative_color, positive_color]);
         }
+
+        // text is bound to Object.entries(x_axes)
+        g.selectAll(".text").style("font-weight", (d) => (d[0] === lines_color_by ? 700 : 300));
 
         // dots are bound to ordered_gene_wise.samples
         g.selectAll(".dot")
@@ -722,7 +723,7 @@ function Braid(samples_by_genes_matrix, gene_sets, classes) {
         }
     }
 
-    function GeneCards(d) { window.open("http://www.genecards.org/cgi-bin/carddisp.pl?gene="+d.id,'_blank') }
+    function GeneCards(symbol) { window.open("http://www.genecards.org/cgi-bin/carddisp.pl?gene="+symbol,'_blank') }
 
 
     /////////////////////////////////////////////////////////////////////////////
