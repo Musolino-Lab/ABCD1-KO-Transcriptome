@@ -41,7 +41,6 @@
 </head>
 <body>
 
-
     <div class="container-fluid">
 
         <div class="row flex-nowrap">
@@ -50,7 +49,7 @@
                     <div class="card-header">
                         <a class="pull-right" role="button"><i class="fa" id="hide-show"></i></a>
                         <h1><a href="index.html" class="link-unstyled">ABCD1-knockout transcriptome</a></h1>
-                        <p><a id="enrich" href="#">Enrich DE genes</a> | <a id="degenes" href="#">Download DE genes</a> | <a id="download">Download SVG</a></p>
+                        <p><a id="enrich" href="#">Enrich DE genes</a> | <a id="degenes" href="#">Download DE genes</a></p>
 
                         <nav>
                             <div class="nav nav-tabs card-header-tabs" role="tablist">
@@ -72,7 +71,6 @@
                             <input type="color" value="#ee8822" id="good_logFC_bad_q_color_picker">
                             <input type="color" value="#eecc22" id="bad_logFC_good_q_color_picker">
                             <input type="color" value="#ee2222" id="good_logFC_good_q_color_picker">
-                            <input type="color" value="#ff0000" id="threshold_color">
 
                             <hr>
                             <input type="checkbox" id="show_text" name="show_text" value="show_text">
@@ -102,9 +100,12 @@
 
     <script type="text/javascript" src="data/human_differential.js"></script>
     <script type="text/javascript" src="volcano.js"></script>
+    <script type="text/javascript" src="GOrilla.js"></script>
 
     <script type="text/javascript">
 
+volcano = Volcano(human_differential);
+volcano.restart();
 
 /////////////////////////////////////////////////////////////////////////////
                  ///////    Figure Styling    ///////
@@ -112,43 +113,15 @@
 
 $('#hide-show').click(function(e) { $('.menu').toggleClass('hidden'); });
 
+$("#bad_logFC_bad_q_color_picker").change(   function () {volcano.style({'bad_logFC_bad_q_color_': this.value}) });
+$("#good_logFC_bad_q_color_picker").change(  function () {volcano.style({'good_logFC_bad_q_color_': this.value}) });
+$("#bad_logFC_good_q_color_picker").change(  function () {volcano.style({'bad_logFC_good_q_color_': this.value}) });
+$("#good_logFC_good_q_color_picker").change( function () {volcano.style({'good_logFC_good_q_color_': this.value}) });
+$("#point_size").change(                     function () {volcano.style({'point_size_': parseFloat(this.value)}) });
+$("#font_size").change(                      function () {volcano.style({'font_size_': parseFloat(this.value)}) });
 
-$("#bad_logFC_bad_q_color_picker").change(function() {
-    bad_logFC_bad_q_color = this.value;
-    restart();
-});
-$("#good_logFC_bad_q_color_picker").change(function() {
-    good_logFC_bad_q_color = this.value;
-    restart();
-});
-$("#bad_logFC_good_q_color_picker").change(function() {
-    bad_logFC_good_q_color = this.value;
-    restart();
-});
-$("#good_logFC_good_q_color_picker").change(function() {
-    good_logFC_good_q_color = this.value;
-    restart();
-});
-$("#threshold_color").change(function() {
-    threshold_color = this.value;
-    threshold.attr("stroke", threshold_color);
-});
-
-$("#point_size").change(function() {
-    point_size = parseFloat(this.value);
-    restart();
-});
-
-$("#show_text").change(function() {
-    show_text = this.checked;
-    if (show_text) { $("#font_size").prop('disabled', false); }
-    else {           $("#font_size").prop('disabled', true); }
-    restart();
-});
-
-$("#font_size").change(function() {
-    font_size = parseFloat(this.value);
-    text.style("font-size", font_size);
+$("#show_text").change(                      function () {volcano.style({'show_text_': this.checked});
+    if (show_text) { $("#font_size").prop('disabled', false); } else { $("#font_size").prop('disabled', true); }
 });
 
 
@@ -156,145 +129,25 @@ $("#font_size").change(function() {
                  ///////    Find a Gene    ///////
 /////////////////////////////////////////////////////////////////////////////
 
-
 var input = document.getElementById("chooseGene");
 var form = new Awesomplete(input, {
-    list: _(data).pluck('id'),
+    list: _(volcano.data).pluck('id'),
     maxItems: 30,
 });
-document.addEventListener('awesomplete-selectcomplete', function(e) {
-    element = d3.select('#'+e.text.value)
-    selected_gene = element._groups[0][0].__data__;
-    position = element.node().getBoundingClientRect();
-    tipEnter(selected_gene);
-    tooltip.style("top", (position.y - 5) + "px")
-           .style("left", (position.x + 10) + "px");
+document.addEventListener('awesomplete-selectcomplete', function(e) { volcano.showTipOn(e.text.value) });
 
-});
-
-/////////////////////////////////////////////////////////////////////////////
-                 ///////    Enrichr / GOrilla   ///////
-/////////////////////////////////////////////////////////////////////////////
-
-
-$("#enrich").click(function(e) {
-    var genes = _(data.filter(is_differential)).pluck('id');
-
-    // ENRICHR
-    // var description  = description || "";
-    // var popup = true;
-    // var form = document.createElement('form');
-    // var listField = document.createElement('input');
-    // var descField = document.createElement('input');
-    // form.setAttribute('method', 'post');
-    // form.setAttribute('action', 'http://amp.pharm.mssm.edu/Enrichr/enrich');
-    // form.setAttribute('target', '_blank');
-    // form.setAttribute('enctype', 'multipart/form-data');
-    // listField.setAttribute('type', 'hidden');
-    // listField.setAttribute('name', 'list');
-    // listField.setAttribute('value', genes);
-    // form.appendChild(listField);
-    // descField.setAttribute('type', 'hidden');
-    // descField.setAttribute('name', 'description');
-    // descField.setAttribute('value', description);
-    // form.appendChild(descField);
-
-    // GOrilla
-    var form = document.createElement('form');
-    form.setAttribute('method', 'post');
-    form.setAttribute('action', 'http://cbl-gorilla.cs.technion.ac.il/servlet/GOrilla');
-    form.setAttribute('target', '_blank');
-    form.setAttribute('enctype', 'multipart/form-data');
-
-    var application_field = document.createElement('input');
-    application_field.setAttribute("type", "hidden");
-    application_field.setAttribute("name", "application");
-    application_field.setAttribute("value", "gorilla");
-    form.appendChild(application_field);
-
-    var species_field = document.createElement('input');
-    species_field.setAttribute("type", "hidden");
-    species_field.setAttribute("name", "species");
-    species_field.setAttribute("value", "HOMO_SAPIENS");
-    form.appendChild(species_field);
-
-    var run_mode_field = document.createElement('input');
-    run_mode_field.setAttribute("type", "hidden");
-    run_mode_field.setAttribute("name", "run_mode");
-    run_mode_field.setAttribute("value", "mhg");
-    form.appendChild(run_mode_field);
-
-    var target_set_field = document.createElement('input');
-    target_set_field.setAttribute("type", "hidden");
-    target_set_field.setAttribute("name", "target_set");
-    target_set_field.setAttribute("value", genes.join("\n"));
-    form.appendChild(target_set_field);
-
-    var background_set_field = document.createElement('input');
-    background_set_field.setAttribute("type", "hidden");
-    background_set_field.setAttribute("name", "background_set");
-    background_set_field.setAttribute("value", "");
-    form.appendChild(background_set_field);
-
-    var db_field = document.createElement('input');
-    db_field.setAttribute("type", "hidden");
-    db_field.setAttribute("name", "db");
-    db_field.setAttribute("value", "proc");
-    form.appendChild(db_field);
-
-    var run_gogo_button_field = document.createElement('input');
-    run_gogo_button_field.setAttribute("type", "hidden");
-    run_gogo_button_field.setAttribute("name", "run_gogo_button");
-    run_gogo_button_field.setAttribute("value", "Search Enriched GO terms");
-    form.appendChild(run_gogo_button_field);
-
-    var pvalue_thresh_field = document.createElement('input');
-    pvalue_thresh_field.setAttribute("type", "hidden");
-    pvalue_thresh_field.setAttribute("name", "pvalue_thresh");
-    pvalue_thresh_field.setAttribute("value", "0.001");
-    form.appendChild(pvalue_thresh_field);
-
-    var analysis_name_field = document.createElement('input');
-    analysis_name_field.setAttribute("type", "hidden");
-    analysis_name_field.setAttribute("name", "analysis_name");
-    analysis_name_field.setAttribute("value", "");
-    form.appendChild(analysis_name_field);
-
-    var user_email_field = document.createElement('input');
-    user_email_field.setAttribute("type", "hidden");
-    user_email_field.setAttribute("name", "user_email");
-    user_email_field.setAttribute("value", "");
-    form.appendChild(user_email_field);
-
-    var fast_mode_field = document.createElement('input');
-    fast_mode_field.setAttribute("type", "hidden");
-    fast_mode_field.setAttribute("name", "fast_mode");
-    fast_mode_field.setAttribute("value", "on");
-    form.appendChild(fast_mode_field);
-
-    document.body.appendChild(form);
-    form.submit();
-    document.body.removeChild(form);
-
-});
 
 /////////////////////////////////////////////////////////////////////////////
                  ///////    Downloads    ///////
 /////////////////////////////////////////////////////////////////////////////
 
-d3.select("#download").on("click", function() {
+// d3.select("#download").on("click", function() {
+//     d3.select(this).attr("href", 'data:application/octet-stream;base64,' + btoa(unescape(encodeURIComponent(d3.select("#graph-container").html())))).attr("download", "plot.svg");
+// })
 
-    d3.select(this)
-      .attr("href", 'data:application/octet-stream;base64,' + btoa(unescape(encodeURIComponent(d3.select("#graph-container").html()))))
-      .attr("download", "plot.svg")
-})
+$("#enrich").click(function(e) { GOrilla(volcano.DEgenes()); });
 
-$("#degenes").click(function() {
-
-    d3.select(this)
-      .attr("href", 'data:application/octet-stream;base64,' + btoa(_(data.filter(is_differential)).pluck('id').join("\n")))
-      .attr("download", "DE_Genes.txt")
-})
+$("#degenes").click(function() { d3.select(this).attr("href", 'data:application/octet-stream;base64,' + btoa(volcano.DEgenes().join("\n"))).attr("download", "DE_Genes.txt") });
 
     </script>
 
