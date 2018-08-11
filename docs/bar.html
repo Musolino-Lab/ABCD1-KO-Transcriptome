@@ -54,11 +54,7 @@
                                 </div>
                             </div>
                             <hr>
-                            <label for="chooseGO">Gene Ontology Terms:</label>
-                            <input class="form-control" id="chooseGO" placeholder="Choose a GO Term..." />
-                            <hr>
-                            <label for="chooseGO">MSigDB Canonical Pathways:</label>
-                            <input class="form-control" id="choosePathway" placeholder="Choose a Gene Set..." />
+                            <input class="form-control" id="chooseGeneSet" placeholder="Choose a Gene Set..." />
 
                         </div>
                     </div>
@@ -85,11 +81,33 @@
 
     <script type="text/javascript">
 
+var bar = Bar(human_differential);
+
+/////////////////////////////////////////////////////////////////////////////
+             ///////    Select Gene Set / Thresholds   ///////
+/////////////////////////////////////////////////////////////////////////////
+
+var chooseGeneSet = document.getElementById("chooseGeneSet");
+var chooseGeneSetform = new Awesomplete(chooseGeneSet, {
+    list: Object.entries(human_gene_sets),
+    maxItems: 30,
+    replace: function (text) { this.input.value = text.label; }
+});
+
+document.addEventListener('awesomplete-selectcomplete', function(e) {
+    selected_gene_set_name = e.text.label;
+    selected_genes = e.text.value;
+    bar.restart({'selected_gene_set_name_':selected_gene_set_name, 'selected_genes_':selected_genes});
+});
+
+
+$("#q_threshold").change(  function () { bar.restart({'q_threshold_': parseFloat(this.value)}) });
+$("#fc_threshold").change( function () { bar.restart({'fc_threshold_': parseFloat(this.value)}) });
+
 
 /////////////////////////////////////////////////////////////////////////////
                  ///////    Download SVG    ///////
 /////////////////////////////////////////////////////////////////////////////
-
 
 d3.select("#download").on("click", function() {
 
@@ -106,45 +124,6 @@ $("#degenes").click(function() {
 })
 
 $('#hide-show').click(function(e) { $('.menu').toggleClass('hidden'); });
-
-
-/////////////////////////////////////////////////////////////////////////////
-             ///////    Select Gene Set / Thresholds   ///////
-/////////////////////////////////////////////////////////////////////////////
-
-var chooseGO = document.getElementById("chooseGO");
-var chooseGOform = new Awesomplete(chooseGO, {
-    list: Object.entries(go),
-    maxItems: 30,
-    replace: function (text) { this.input.value = text.label; }
-});
-
-var choosePathway = document.getElementById("choosePathway");
-var form = new Awesomplete(choosePathway, {
-    list: Object.entries(msigdb),
-    maxItems: 30,
-    replace: function (text) { this.input.value = text.label; }
-});
-
-document.addEventListener('awesomplete-selectcomplete', function(e) {
-    selected_gene_set_name = e.text.label;
-    selected_genes = e.text.value;
-    restart(selected_gene_set_name, selected_genes);
-});
-
-
-$("#q_threshold").change(function() {
-    q_threshold = parseFloat(this.value);
-    // $("#chooseGO")
-    restart();
-});
-
-
-$("#fc_threshold").change(function() {
-    fc_threshold = parseFloat(this.value);
-    // $("#chooseGO")
-    restart();
-});
 
     </script>
 
