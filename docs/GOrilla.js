@@ -1,4 +1,4 @@
-function GOrilla(genes) {
+function GOrilla(genes, species) {
 
     // ENRICHR
     // var description  = description || "";
@@ -35,7 +35,7 @@ function GOrilla(genes) {
     var species_field = document.createElement('input');
     species_field.setAttribute("type", "hidden");
     species_field.setAttribute("name", "species");
-    species_field.setAttribute("value", "HOMO_SAPIENS");
+    species_field.setAttribute("value", species);
     form.appendChild(species_field);
 
     var run_mode_field = document.createElement('input');

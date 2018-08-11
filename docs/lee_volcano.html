@@ -53,15 +53,15 @@
 
                         <nav>
                             <div class="nav nav-tabs card-header-tabs" role="tablist">
-                                <a class="nav-item nav-link active">hBMEC</a>
+                                <a class="nav-item nav-link" href="volcano.html">hBMEC</a>
                                 <a class="nav-item nav-link" href="mouse_volcano.html">mBMEC</a>
-                                <a class="nav-item nav-link" href="lee_volcano.html">Lee et. al. 2018 iPS</a>
+                                <a class="nav-item nav-link active">Lee et. al. 2018 iPS</a>
                             </div>
                         </nav>
 
                     </div>
                     <div class="tab-content collapse show" id="collapsable">
-                        <div class="tab-pane fade show active card-body" id="hBMEC" role="tabpanel">
+                        <div class="tab-pane fade show active card-body" id="Lee" role="tabpanel">
 
                             <label for="point_size">Point Size</label>
                             <input type="range" id="point_size" name="" min="0.5" max="4" step="0.1" value="2.0" style="position: relative; top: 3px;">
@@ -98,13 +98,13 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/awesomplete/1.1.2/awesomplete.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/underscore.js/1.9.1/underscore-min.js"></script>
 
-    <script type="text/javascript" src="data/human_differential.js"></script>
+    <script type="text/javascript" src="data/lee_differential.js"></script>
     <script type="text/javascript" src="volcano.js"></script>
     <script type="text/javascript" src="GOrilla.js"></script>
 
     <script type="text/javascript">
 
-volcano = Volcano(human_differential);
+volcano = Volcano(lee_differential);
 volcano.restart();
 
 /////////////////////////////////////////////////////////////////////////////
