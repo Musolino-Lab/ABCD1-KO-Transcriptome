@@ -281,7 +281,7 @@ function Heatmap(samples_by_genes_matrix, gene_sets, classes) {
             .style("text-anchor", "end")
             .attr("dy", "1em")
             .on("click", (d) => GeneCards(d))
-            // .call(d3.drag().on("start", drag_axis_start).on("drag", drag_axis).on("end", drag_axis_end))
+            .call(d3.drag().on("start", drag_gene_start).on("drag", drag_gene).on("end", drag_gene_end))
             .style("opacity", 0)
             .transition(t_last)
                 .style("opacity", 1);
@@ -297,7 +297,7 @@ function Heatmap(samples_by_genes_matrix, gene_sets, classes) {
             .style("cursor", "pointer")
             .style("text-anchor", "start")
             .attr("dy", "0.5em")
-            // .call(d3.drag().on("start", drag_axis_start).on("drag", drag_axis).on("end", drag_axis_end))
+            .call(d3.drag().on("start", drag_sample_start).on("drag", drag_sample).on("end", drag_sample_end))
             .style("opacity", 0)
             .transition(t_last)
                 .style("opacity", 1);
@@ -335,25 +335,20 @@ function Heatmap(samples_by_genes_matrix, gene_sets, classes) {
                           ///////    Drag Axes    ///////
     /////////////////////////////////////////////////////////////////////////////
 
-    function drag_axis_start(d) {}
-
-    function drag_axis(d) {
-
-        if (d3.select(this).attr("class") == 'gene_symbol') {
-
-            accessor = 'gene';
-            dragged_index = _(ordered_gene_wise[0]).findIndex((d2) => d2.sample === d);
+    function drag_gene_start(d) {
 
 
-        } else if (d3.select(this).attr("class") == 'sample_id') {
+        console.log(ordered_gene_wise);
 
-            accessor = 'sample';
-            dragged_index = _(ordered_gene_wise).findIndex((byGene) => byGene[0].sample === d);
+    }
 
-        }
+    function drag_gene(d) {
 
-        g.select("#"+d).attr("transform", function(d, i) { return "translate(0," +  expr(i) + ")" });
-        g.selectAll(".rect").attr("transform", function(d, i) { return "translate(0," + (expr(i) - max_point_radius) + ")" });
+        dragged_index = _(ordered_gene_wise).findIndex((gene) => gene.gene === d);
+        console.log(dragged_index);
+
+        // g.select("#"+d).attr("transform", function(d, i) { return "translate(0," +  expr(i) + ")" });
+        // g.selectAll(".rect").attr("transform", function(d, i) { return "translate(0," + (expr(i) - max_point_radius) + ")" });
 
 
         // let expr = (current_index) => {
@@ -378,7 +373,7 @@ function Heatmap(samples_by_genes_matrix, gene_sets, classes) {
 
     }
 
-    function drag_axis_end(d) {
+    function drag_gene_end(d) {
 
         // dragged_index = _(ordered_gene_wise).findIndex((gene) => gene.id === d[0]);
         // old_index = dragged_index;
@@ -391,6 +386,14 @@ function Heatmap(samples_by_genes_matrix, gene_sets, classes) {
 
     }
 
+
+    function drag_sample_start(d) {
+        console.log(sample_wise);
+
+    }
+    function drag_sample(d) {}
+    function drag_sample_end(d) {}
+
     /////////////////////////////////////////////////////////////////////////////
                           ///////    Brush Axes    ///////
     /////////////////////////////////////////////////////////////////////////////
@@ -402,7 +405,7 @@ function Heatmap(samples_by_genes_matrix, gene_sets, classes) {
     function removeFocus(d) {
     }
 
-    function GeneCards(d) { window.open("http://www.genecards.org/cgi-bin/carddisp.pl?gene="+d.id,'_blank') }
+    function GeneCards(d) { window.open("http://www.genecards.org/cgi-bin/carddisp.pl?gene="+d,'_blank') }
 
 
     /////////////////////////////////////////////////////////////////////////////
