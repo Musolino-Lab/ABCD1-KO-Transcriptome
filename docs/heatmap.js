@@ -77,7 +77,7 @@ function Heatmap(samples_by_genes_matrix, gene_sets, classes) {
     /////////////////////////////////////////////////////////////////////////////
 
     var svg = d3.select("#graph-container").append("svg").attr("xmlns", "http://www.w3.org/2000/svg").attr("xmlns:xlink", "http://www.w3.org/1999/xlink");
-    var g = svg.append("g").attr("transform", "translate("+margin.left+","+margin.top+")");
+    var g = svg.append("g");
     svg.style("cursor", "move");
 
     var gene_set_name = "";
@@ -88,7 +88,7 @@ function Heatmap(samples_by_genes_matrix, gene_sets, classes) {
     var sample_wise = [];
     var sample_wise_indexer = {};
 
-    var y = (index) => axis_spacing*index;
+    var y = (index) => s()*index;
 
     function idFunc(d) { return d ? d.id : this.id; }
 
@@ -358,14 +358,14 @@ function Heatmap(samples_by_genes_matrix, gene_sets, classes) {
 
         // let expr = (current_index) => {
         //     if (current_index < dragged_index) {
-        //         if (current_index < ((d3.event.y-axis_spacing/2) / axis_spacing)) {
+        //         if (current_index < ((d3.event.y-s()/2) / s())) {
         //                 return y(current_index);
         //             } else {
-        //                 return y(current_index) + axis_spacing;
+        //                 return y(current_index) + s();
         //             }
         //     } else {  // current_index >= dragged_index
-        //         if (current_index < ((d3.event.y+axis_spacing/2) / axis_spacing)) {
-        //                 return y(current_index) - axis_spacing;
+        //         if (current_index < ((d3.event.y+s()/2) / s())) {
+        //                 return y(current_index) - s();
         //             } else {
         //                 return y(current_index);
         //             }
@@ -382,7 +382,7 @@ function Heatmap(samples_by_genes_matrix, gene_sets, classes) {
 
         // dragged_index = _(ordered_gene_wise).findIndex((gene) => gene.id === d[0]);
         // old_index = dragged_index;
-        // new_index = clamp(0, ordered_gene_wise.length)(Math.round(d3.event.y / axis_spacing));
+        // new_index = clamp(0, ordered_gene_wise.length)(Math.round(d3.event.y / s()));
 
         // ordered_gene_wise.splice(new_index, 0, ordered_gene_wise.splice(old_index, 1)[0]);
         // sample_wise.forEach((sample) => sample.genes.splice(new_index, 0, sample.genes.splice(old_index, 1)[0]));
@@ -409,16 +409,30 @@ function Heatmap(samples_by_genes_matrix, gene_sets, classes) {
                           ///////   Zoom & Resize    ///////
     /////////////////////////////////////////////////////////////////////////////
 
-    svg.call(d3.zoom()
-               .scaleExtent([1 / 8, 8])
-               .on("zoom", zoomed));
+    svg.call(d3.zoom().on("zoom", zoomed)).on("wheel.zoom", wheeled);
 
-    function zoomed() { g.attr("transform", d3.event.transform); }
+    transform = d3.zoomTransform(g);
+    transform.x += margin.left;
+    transform.y += margin.top;
+    g.attr("transform", transform);
+
+    function zoomed() {
+        current_transform = d3.zoomTransform(g);
+        current_transform.x += d3.event.sourceEvent.movementX;
+        current_transform.y += d3.event.sourceEvent.movementY;
+        g.attr("transform", current_transform);
+    }
+
+    function wheeled() {
+        current_transform = d3.zoomTransform(g);
+        current_transform.y = clamp(-(s()*ordered_gene_wise.length-100) , 100)(current_transform.y - d3.event.deltaY);
+        g.attr("transform", current_transform);
+    }
 
     function resize() {
-        svg.attr("width", window.innerWidth).attr("height", window.innerHeight);
-        w = window.innerWidth - (margin.left + margin.right);
-        h = window.innerHeight - (margin.top + margin.bottom);
+        svg.attr("width", $("#graph-container").innerWidth()).attr("height", $("#graph-container").innerHeight());
+        w = $("#graph-container").innerWidth() - (margin.left + margin.right);
+        h = $("#graph-container").innerHeight() - (margin.top + margin.bottom);
     }
 
     d3.select(window).on("resize", resize)

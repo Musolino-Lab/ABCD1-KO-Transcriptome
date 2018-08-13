@@ -5,75 +5,16 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta http-equiv="Content-Type" content="text/html;charset=utf-8"/>
 
-    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css" integrity="sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm" crossorigin="anonymous">
-    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/awesomplete/1.1.2/awesomplete.css" />
+    <!-- <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css" integrity="sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm" crossorigin="anonymous"> -->
+    <link rel="stylesheet" href="bootstrap.min.css">
+    <!-- <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css"> -->
+    <link rel="stylesheet" href="font-awesome.min.css">
+    <!-- <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/awesomplete/1.1.2/awesomplete.css" /> -->
+    <link rel="stylesheet" href="awesomplete.css">
+
+    <link rel="stylesheet" href="axial.css">
 
     <style type="text/css">
-        h1 { font-weight: 100; }
-        #graph-container {
-            top: 0;
-            bottom: 0;
-            left: 0;
-            right: 0;
-            position: fixed;
-        }
-
-        .go-picker {
-            width: 390px;
-            margin: 30px;
-            z-index: 1000;
-            transition: 0.4s transform ease-out;
-        }
-
-        .go-picker.hidden {
-            transform: translate(-350px);
-        }
-
-        .fa:before {
-            font-size: 2rem;
-            color: black;
-            content: "\f104";
-            position: relative;
-            transform: rotate(90deg);
-        }
-        .fa {
-            padding: 0.8rem;
-            transition: 0.4s transform ease-in-out;
-        }
-        .hidden .fa {
-            transform: rotate(180deg);
-        }
-
-        .awesomplete {
-            display: block !important;
-        }
-        .link-unstyled, .link-unstyled:link {
-            color: inherit;
-            text-decoration: inherit;
-        }
-        .link-unstyled:hover {
-            text-decoration: inherit;
-        }
-        label {
-            font-weight: 600;
-            margin-bottom: 0px;
-        }
-        input[type="checkbox"] {
-            margin-right: 5px;
-            position: relative;
-            top: -2px;
-        }
-
-        input[type="range"] {
-            position: relative;
-            top: 3px;
-        }
-
-        [contenteditable=true]:empty:before {
-            content: attr(placeholder);
-            display: block; /* For Firefox */
-        }
 
     </style>
 
@@ -82,13 +23,10 @@
 </head>
 <body>
 
-
-    <div id="graph-container"></div>
-
     <div class="container-fluid">
 
-        <div class="row">
-            <div class="go-picker">
+        <div class="row flex-nowrap">
+            <div class="col-md-4 col-12 menu">
                 <div class="card">
                     <div class="card-header">
                         <a class="pull-right" role="button"><i class="fa" id="hide-show"></i></a>
@@ -153,28 +91,40 @@
                     </div>
                 </div>
             </div>
+
+            <div id="graph-container"></div>
+
         </div>
     </div>
 
 
 
-    <script src="https://code.jquery.com/jquery-3.2.1.slim.min.js" integrity="sha384-KJ3o2DKtIkvYIK3UENzmM7KCkRr/rE9/Qpg6aAZGJwFDMVNA/GpGFF93hXpG5KkN" crossorigin="anonymous"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.12.9/umd/popper.min.js" integrity="sha384-ApNbgh9B+Y1QKtv3Rn7W3mgPxhU9K/ScQsAP7hUibX39j7fakFPskvXusvfa0b4Q" crossorigin="anonymous"></script>
-    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/js/bootstrap.min.js" integrity="sha384-JZR6Spejh4U02d8jOt6vLEHfe/JQGiRRSQQxSfFWpi1MquVdAyjUar5+76PVCmYl" crossorigin="anonymous"></script>
+    <!-- <script src="https://code.jquery.com/jquery-3.2.1.slim.min.js" integrity="sha384-KJ3o2DKtIkvYIK3UENzmM7KCkRr/rE9/Qpg6aAZGJwFDMVNA/GpGFF93hXpG5KkN" crossorigin="anonymous"></script> -->
+    <script src="jquery-3.2.1.slim.min.js" ></script>
+    <!-- <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.12.9/umd/popper.min.js" integrity="sha384-ApNbgh9B+Y1QKtv3Rn7W3mgPxhU9K/ScQsAP7hUibX39j7fakFPskvXusvfa0b4Q" crossorigin="anonymous"></script> -->
+    <script src="popper.min.js" ></script>
+    <!-- <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/js/bootstrap.min.js" integrity="sha384-JZR6Spejh4U02d8jOt6vLEHfe/JQGiRRSQQxSfFWpi1MquVdAyjUar5+76PVCmYl" crossorigin="anonymous"></script> -->
+    <script src="bootstrap.min.js" ></script>
 
-    <script type="text/javascript" src="https://d3js.org/d3.v5.min.js"></script>
-    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/d3-legend/2.25.6/d3-legend.min.js"></script>
+    <!-- <script type="text/javascript" src="https://d3js.org/d3.v5.min.js"></script> -->
+    <script type="text/javascript" src="d3.v5.min.js"></script>
+    <!-- <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/d3-legend/2.25.6/d3-legend.min.js"></script> -->
+    <script type="text/javascript" src="d3-legend.min.js"></script>
 
-    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/awesomplete/1.1.2/awesomplete.js"></script>
-    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/underscore.js/1.9.1/underscore-min.js"></script>
+    <!-- <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/awesomplete/1.1.2/awesomplete.js"></script> -->
+    <script type="text/javascript" src="awesomplete.js"></script>
+    <!-- <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/underscore.js/1.9.1/underscore-min.js"></script> -->
+    <script type="text/javascript" src="underscore.js"></script>
 
     <script type="text/javascript" src="reorder.js"></script>
     <script type="text/javascript" src="heatmap.js"></script>
-    <script type="text/javascript" src="variables.js"></script>
+    <script type="text/javascript" src="data/human_counts.js"></script>
+    <script type="text/javascript" src="data/human_gene_sets.js"></script>
+    <script type="text/javascript" src="data/human_classes.js"></script>
 
     <script type="text/javascript">
 
-class_categories = _.uniq(_.flatten(Object.values(classes).map(obj => Object.keys(obj))));
+class_categories = _.uniq(_.flatten(Object.values(human_classes).map(obj => Object.keys(obj))));
 if (class_categories.length === 0) { $(".form-check-input[value='class']").remove(); }
 else {
     class_categories.forEach(function(key) {
@@ -182,9 +132,9 @@ else {
     });
 }
 
-$("#minimum_nonzero").attr('max', Object.keys(human).length);
+$("#minimum_nonzero").attr('max', Object.keys(human_counts).length);
 
-heatmap = Heatmap(human, gene_sets, classes);
+heatmap = Heatmap(human_counts, human_gene_sets, human_classes);
 
 
 let equal = (a1, a2) => a1.length === a2.length && a1.every((value, i) => value === a2[i]);
@@ -196,7 +146,7 @@ let equal = (a1, a2) => a1.length === a2.length && a1.every((value, i) => value 
 
 var chooseGeneSet = document.getElementById("chooseGeneSet");
 var chooseGeneSetform = new Awesomplete(chooseGeneSet, {
-    list: Object.entries(gene_sets),
+    list: Object.entries(human_gene_sets),
     maxItems: 30,
     replace: function (text) { this.input.value = text.label; }
 });
