@@ -205,7 +205,7 @@ function Heatmap(samples_by_genes_matrix, gene_sets, classes) {
         gSym = g.selectAll(".gSym").data(ordered_gene_ids, d => d);
         sNam = g.selectAll(".sNam").data(ordered_sample_ids, d => d);
         // gGru = g.selectAll(".gGru").data(gene_groups, (d) => d[0]);
-        meta = g.selectAll(".meta").data(Object.entries(categories_to_members_to_values), (d) => d[0]);
+        meta = g.selectAll(".meta").data(Object.entries(categories_to_members_to_values), idFunc);
 
         // phase 1
             // rectangles which are exiting fade out
@@ -235,7 +235,7 @@ function Heatmap(samples_by_genes_matrix, gene_sets, classes) {
             // re-arrange COLUMNS (rectangles, sample names, meta)
         rect.transition(t_last).attr('x', d => x(d.sample)+10);
         sNam.transition(t_last).attr('transform', d => "translate("+(x(d)+rect_width)+","+ordered_gene_ids.length*rect_height+")rotate(60)");
-        // meta.transition(t_last)
+        meta.selectAll('.category_cell').transition(t_last).attr('x', d => x(d[0])+10);
         t_last = t_last.transition().duration(500);
 
         // phase 4
@@ -265,7 +265,7 @@ function Heatmap(samples_by_genes_matrix, gene_sets, classes) {
             .style("font-weight", 300)
             .style("cursor", "pointer")
             .style("text-anchor", "end")
-            .attr("dy", "1em")
+            .attr("dy", "0.8em")
             .on("click", (d) => GeneCards(d))
             .call(d3.drag().on("start", drag_gene_start).on("drag", drag_gene).on("end", drag_gene_end))
             .style("opacity", 0)
@@ -304,8 +304,8 @@ function Heatmap(samples_by_genes_matrix, gene_sets, classes) {
                 .attr("dy", "0.8em")
                 .call(d3.drag().on("start", drag_meta_start).on("drag", drag_meta).on("end", drag_meta_end))
             .select(function() { return this.parentNode; })
-                .selectAll(".dot")
-                .data((d) => Object.entries(d[1]), (d) => d[0])
+                .selectAll(".category_cell")
+                .data(((d) => Object.entries(d[1])), ((e) => e[0]))
                 .enter()
                 .append('rect')
                 .attr("class", "category_cell")
@@ -313,9 +313,12 @@ function Heatmap(samples_by_genes_matrix, gene_sets, classes) {
                 .attr('x', d => x(d[0])+10)
                 .attr('width', rect_width-2)
                 .attr('height', rect_height-2)
-                .attr('fill', d => category_colors['condition'](d[1]));
+                .attr('fill', d => category_colors['condition'](d[1]));  // fix this
 
-
+        g.selectAll(".meta")
+            .style("opacity", 0)
+            .transition(t_last)
+                .style("opacity", 1);
 
 
 
@@ -354,14 +357,14 @@ function Heatmap(samples_by_genes_matrix, gene_sets, classes) {
     function drag_gene_start(d) {
 
 
-        console.log(ordered_gene_wise);
+        // console.log(ordered_gene_wise);
 
     }
 
     function drag_gene(d) {
 
         dragged_index = _(ordered_gene_wise).findIndex((gene) => gene.gene === d);
-        console.log(dragged_index);
+        // console.log(dragged_index);
 
         // g.select("#"+d).attr("transform", function(d, i) { return "translate(0," +  expr(i) + ")" });
         // g.selectAll(".rect").attr("transform", function(d, i) { return "translate(0," + (expr(i) - max_point_radius) + ")" });
@@ -404,7 +407,7 @@ function Heatmap(samples_by_genes_matrix, gene_sets, classes) {
 
 
     function drag_sample_start(d) {
-        console.log(sample_wise);
+        // console.log(sample_wise);
 
     }
     function drag_sample(d) {}
@@ -412,7 +415,7 @@ function Heatmap(samples_by_genes_matrix, gene_sets, classes) {
 
 
     function drag_meta_start(d) {
-        console.log(d);
+        // console.log(d);
 
     }
     function drag_meta(d) {}
