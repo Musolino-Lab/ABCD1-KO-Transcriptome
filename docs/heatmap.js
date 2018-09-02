@@ -100,11 +100,11 @@ function Heatmap(samples_by_genes_matrix, gene_sets, classes) {
                           ///////    Methods    ///////
     /////////////////////////////////////////////////////////////////////////////
 
-    function restart({selected_gene_groups_=selected_gene_groups}={}) {
+    function restart({selected_gene_sets_=selected_gene_sets}={}) {
 
-        selected_gene_groups = selected_gene_groups_;
-        gene_set_name = selected_gene_groups[0].gene_set_name;
-        genes = selected_gene_groups[0].genes;
+        selected_gene_sets = selected_gene_sets_;
+        gene_set_name = selected_gene_sets['selected_gene_sets'][0].gene_set_name;
+        genes = selected_gene_sets['selected_gene_sets'][0].genes;
         matrix = _(samples_by_genes_matrix).mapObject((sample) => _(sample).pick(genes));
 
         sample_wise = Object.entries(matrix).map(([sample, genes]) =>
