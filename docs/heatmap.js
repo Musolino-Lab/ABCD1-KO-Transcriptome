@@ -82,7 +82,6 @@ function Heatmap(samples_by_genes_matrix, gene_sets, classes) {
     var g = svg.append("g");
     svg.style("cursor", "move");
 
-    var gene_set_name = "";
     var genes = [];
     var gene_wise = [];
     var gene_wise_indexer = {};
@@ -103,8 +102,7 @@ function Heatmap(samples_by_genes_matrix, gene_sets, classes) {
     function restart({selected_gene_sets_=selected_gene_sets}={}) {
 
         selected_gene_sets = selected_gene_sets_;
-        gene_set_name = selected_gene_sets['selected_gene_sets'][0].gene_set_name;
-        genes = selected_gene_sets['selected_gene_sets'][0].genes;
+        genes = flatten(selected_gene_sets['selected_gene_sets'].map(gs => gs.genes).push(selected_gene_sets['other_genes']));
         matrix = _(samples_by_genes_matrix).mapObject((sample) => _(sample).pick(genes));
 
         sample_wise = Object.entries(matrix).map(([sample, genes]) =>
@@ -161,7 +159,6 @@ function Heatmap(samples_by_genes_matrix, gene_sets, classes) {
         value_accessor = value_accessors[values];
         sorting = sorting_;
         minimum_nonzero = minimum_nonzero_;
-        if (minimum_nonzero > 0) { gene_set_name = "Genes"; }
 
         // THIS FUNCTION NOW ONLY NEEDS TO PRODUCE ARRAYS:
         // ordered_sample_ids
@@ -456,7 +453,7 @@ function Heatmap(samples_by_genes_matrix, gene_sets, classes) {
     function wheeled() {
         current_transform = d3.zoomTransform(g);
         if (d3.event.ctrlKey) {
-            current_transform.k = clamp(0.1, 10)(current_transform.k - d3.event.deltaY * 0.01);
+            current_transform.k = clamp(0.1, 5)(current_transform.k - d3.event.deltaY * 0.01);
         } else {
             current_transform.y = clamp(-(ordered_gene_ids.length*rect_height-100), h)(current_transform.y - d3.event.deltaY);
         }
