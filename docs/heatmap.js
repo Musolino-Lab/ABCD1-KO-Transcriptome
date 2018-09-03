@@ -102,7 +102,7 @@ function Heatmap(samples_by_genes_matrix, gene_sets, classes) {
     function restart({selected_gene_sets_=selected_gene_sets}={}) {
 
         selected_gene_sets = selected_gene_sets_;
-        genes = flatten(selected_gene_sets['selected_gene_sets'].map(gs => gs.genes).push(selected_gene_sets['other_genes']));
+        genes = flatten(selected_gene_sets['selected_gene_sets'].map(gs => gs.genes).concat(selected_gene_sets['other_genes']));
         matrix = _(samples_by_genes_matrix).mapObject((sample) => _(sample).pick(genes));
 
         sample_wise = Object.entries(matrix).map(([sample, genes]) =>
