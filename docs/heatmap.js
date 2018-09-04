@@ -5,7 +5,7 @@ let clamp = (min, max) => ((x) => Math.min(Math.max(x, min), max));
 let transpose = (array) => array[0].map((col, i) => array.map(row => row[i]));
 let flatten = (array) => [].concat.apply([], array);
 
-function Heatmap(samples_by_genes_matrix, gene_sets, classes) {
+function Heatmap(samples_by_genes_matrix, gene_sets, classes, separate_by) {
 
     // samples_by_genes_matrix: {'sample_id': {'gene1': float, 'gene2': float}};
 
@@ -21,10 +21,11 @@ function Heatmap(samples_by_genes_matrix, gene_sets, classes) {
         [category, _.object(Object.entries(classes).map(([sample_id, categories_to_values]) => [sample_id, categories_to_values[category]]))]
     ));
 
-    // categories_to_values_to_members: {'category': {'value1': ['sample_id1', 'sample_id2']}}  <- I need this one
+    // categories_to_values_to_members: {'category': {'value1': ['sample_id1', 'sample_id2']}}
     var categories_to_values_to_members = _(categories_to_members_to_values).mapObject((samples_to_values) =>
         _(_(Object.entries(samples_to_values)).groupBy(([sample_id, value]) => value)).mapObject((arr_of_arr) => arr_of_arr.map(arr => arr[0]))
     );
+
 
     /////////////////////////////////////////////////////////////////////////////
                     ///////    Structure Variables    ///////
@@ -82,12 +83,14 @@ function Heatmap(samples_by_genes_matrix, gene_sets, classes) {
     var g = svg.append("g");
     svg.style("cursor", "move");
 
+    var selected_gene_sets = {}
     var genes = [];
     var gene_wise = [];
     var gene_wise_indexer = {};
     var ordered_gene_wise = [];
     var sample_wise = [];
     var sample_wise_indexer = {};
+    var metadata = {};
 
 
     function idFunc(d) { return d ? d.id : this.id; }
@@ -102,8 +105,8 @@ function Heatmap(samples_by_genes_matrix, gene_sets, classes) {
     function restart({selected_gene_sets_=selected_gene_sets}={}) {
 
         selected_gene_sets = selected_gene_sets_;
-        genes = flatten(selected_gene_sets['selected_gene_sets'].map(gs => gs.genes).concat(selected_gene_sets['other_genes']));
-        matrix = _(samples_by_genes_matrix).mapObject((sample) => _(sample).pick(genes));
+        genes = selected_gene_sets['selected_gene_sets'].map(gs => gs.genes).concat(selected_gene_sets['other_genes']);
+        matrix = _(samples_by_genes_matrix).mapObject((sample) => _(sample).pick(flatten(genes)));
 
         sample_wise = Object.entries(matrix).map(([sample, genes]) =>
             Object.entries(genes).map(([gene, count]) => { return {
@@ -136,16 +139,6 @@ function Heatmap(samples_by_genes_matrix, gene_sets, classes) {
         gene_wise_indexer =  _.object(gene_wise.map((gene, i) => [gene[0].gene, i]));
         sample_wise_indexer = _.object(sample_wise.map((sample, i) => [sample[0].sample, i]));
 
-        ordered_gene_wise = gene_wise;
-
-        all_values = flatten(ordered_gene_wise);
-
-        colors = {
-            zscore_stddev:  d3.scaleLinear().domain([d3.min(all_values, d => d.zscore_stddev), 0, d3.max(all_values, d => d.zscore_stddev)]).range([negative_color, middle_color, positive_color]),
-            zscore_mad:     d3.scaleLinear().domain([d3.min(all_values, d => d.zscore_mad),    0, d3.max(all_values, d => d.zscore_mad)]   ).range([negative_color, middle_color, positive_color]),
-            pc1:            d3.scaleLinear().domain([d3.min(all_values, d => d.pc1),           0, d3.max(all_values, d => d.pc1)]          ).range([negative_color, middle_color, positive_color]),
-        }
-
         order();
         render();
 
@@ -160,34 +153,56 @@ function Heatmap(samples_by_genes_matrix, gene_sets, classes) {
         sorting = sorting_;
         minimum_nonzero = minimum_nonzero_;
 
-        // THIS FUNCTION NOW ONLY NEEDS TO PRODUCE ARRAYS:
-        // ordered_sample_ids
-        // ordered_gene_ids
+    // ORDER GENE WISE
 
         // Filter by number non-zeros
         ordered_gene_wise = gene_wise.filter((gene) => gene[0].num_nonzeros >= minimum_nonzero);
 
-        if (ordered_gene_wise.length === 0) { return; }
+        if (ordered_gene_wise.length === 0) { return; }  // do something smart here.
 
         // Set Gene-Wise PC1
         // genes_pc1 = reorder.pca1d(reorder.transpose(ordered_gene_wise.map(value_accessor)));
         // _(_.zip(ordered_gene_wise, genes_pc1)).each((gene, pc1) => gene.pc1 = pc1);
 
         // Order Genes
-        if (reordering && ordered_gene_wise.length > 1) {
+        genes.forEach((set, i) => {
 
-            if (sorting === 'pc1') {
-                permutation_order = reorder.sort_order(genes_pc1);
-            } else if (sorting === 'complete') {
-                permutation_order = reorder.optimal_leaf_order()(ordered_gene_wise.map((bygene) => bygene.map(d => d[values])));  // get dendogram out?
-            } else { console.log(' this should never happen '); }
+            if (reordering && ordered_gene_wise.length > 1) {
 
-            ordered_gene_wise = reorder.stablepermute(ordered_gene_wise, permutation_order);
+                if (sorting === 'complete') { permutation_order = reorder.optimal_leaf_order()(ordered_gene_wise.filter(bygene => set.includes(bygene[0].gene)).map((bygene) => bygene.map(d => d[values]))); } // get dendogram out?
+                else if (sorting === 'pc1') { permutation_order = reorder.sort_order(genes_pc1); }
 
-        } else { permutation_order = range(ordered_gene_wise.length); }
+                genes[i] = reorder.stablepermute(set, permutation_order);
+            }
+        });
 
-        ordered_sample_ids = sample_wise.map((sample) => sample[0].sample);
-        ordered_gene_ids = ordered_gene_wise.map((byGene) => byGene[0].gene)
+        ordered_gene_ids = flatten(genes);
+
+    // ORDER SAMPLE WISE
+
+        hierarchy = {'name':'metadata', 'children':[]};
+
+        Object.entries(classes).forEach(([sample_id, metadata]) => {
+            pointer = hierarchy.children;
+            categories.forEach((category, i) => {
+                value = metadata[category]
+                existing_index_for_value = _(pointer).findIndex({'name': value});
+                if (existing_index_for_value > -1) {
+                    if (i+1 === categories.length) { pointer[existing_index_for_value].children.push({'name':sample_id}); }
+                    else { pointer = pointer[existing_index_for_value].children; }
+                } else {
+                    if (i+1 === categories.length) { pointer.push({'name':value, 'children':[{'name':sample_id}]}); }
+                    else {
+                        pointer.push({'name':value,'children':[]});
+                        pointer = pointer[_(pointer).findIndex({'name': value})].children;
+                    }
+                }
+            })
+        });
+
+        metadata = d3.hierarchy(hierarchy).count().sort(function(a, b) { return b.height - a.height || b.value - a.value; });
+
+        ordered_sample_ids = metadata.leaves().map(leaf => leaf.data.name);
 
     }
 
@@ -198,11 +213,26 @@ function Heatmap(samples_by_genes_matrix, gene_sets, classes) {
         x = d3.scalePoint().domain(ordered_sample_ids).range([0,(ordered_sample_ids.length-1)*rect_width]);
         y = d3.scalePoint().domain(ordered_gene_ids).range([0,(ordered_gene_ids.length-1)*rect_height]);
 
+        all_values = flatten(gene_wise);
+
+        colors = {
+            zscore_stddev:  d3.scaleLinear().domain([d3.min(all_values, d => d.zscore_stddev), 0, d3.max(all_values, d => d.zscore_stddev)]).range([negative_color, middle_color, positive_color]),
+            zscore_mad:     d3.scaleLinear().domain([d3.min(all_values, d => d.zscore_mad),    0, d3.max(all_values, d => d.zscore_mad)]   ).range([negative_color, middle_color, positive_color]),
+            pc1:            d3.scaleLinear().domain([d3.min(all_values, d => d.pc1),           0, d3.max(all_values, d => d.pc1)]          ).range([negative_color, middle_color, positive_color]),
+        }
+
+
+        partition_height = rect_width*ordered_sample_ids.length+2;
+        partition_width = rect_height*(categories.length+2);
+        partition = d3.partition().size([partition_height, partition_width]).padding(2).round(true);
+        partition(metadata);
+
+
         rect = g.selectAll(".rect").data(flatten(ordered_gene_wise), idFunc);
         gSym = g.selectAll(".gSym").data(ordered_gene_ids, d => d);
         sNam = g.selectAll(".sNam").data(ordered_sample_ids, d => d);
         // gGru = g.selectAll(".gGru").data(gene_groups, (d) => d[0]);
-        meta = g.selectAll(".meta").data(Object.entries(categories_to_members_to_values), idFunc);
+        meta = g.selectAll(".meta").data(metadata.descendants(), idFunc);
 
         // phase 1
             // rectangles which are exiting fade out
@@ -232,7 +262,7 @@ function Heatmap(samples_by_genes_matrix, gene_sets, classes) {
             // re-arrange COLUMNS (rectangles, sample names, meta)
         rect.transition(t_last).attr('x', d => x(d.sample)+10);
         sNam.transition(t_last).attr('transform', d => "translate("+(x(d)+rect_width)+","+ordered_gene_ids.length*rect_height+")rotate(60)");
-        meta.selectAll('.category_cell').transition(t_last).attr('x', d => x(d[0])+10);
+        // meta.selectAll('.category_cell').transition(t_last).attr('x', d => x(d[0])+10);
         t_last = t_last.transition().duration(500);
 
         // phase 4
@@ -288,37 +318,42 @@ function Heatmap(samples_by_genes_matrix, gene_sets, classes) {
         // gGru.enter()
 
 
-        meta.enter()
-            .append('g')
-            .attr("class", "meta")
-            .attr("id", d => d[0])
-            .attr("transform", (d, i) => "translate(0," + ((-i-1)*rect_height-5) + ")")
-                .append('text')
-                .attr("class", "category_label")
-                .attr("id", d => d[0])
-                .text(d => d[0])
-                .attr('x', d => x.range()[1]+rect_width+14)
-                .attr("dy", "0.8em")
-                .call(d3.drag().on("start", drag_meta_start).on("drag", drag_meta).on("end", drag_meta_end))
-            .select(function() { return this.parentNode; })
-                .selectAll(".category_cell")
-                .data(((d) => Object.entries(d[1])), ((e) => e[0]))
-                .enter()
-                .append('rect')
-                .attr("class", "category_cell")
-                .attr("id", d => d[0])
-                .attr('x', d => x(d[0])+10)
-                .attr('width', rect_width-2)
-                .attr('height', rect_height-2)
-                .attr('fill', d => category_colors['condition'](d[1]));  // fix this
 
-        g.selectAll(".meta")
+
+
+        meta.enter()
+            .filter(function(d) { return d.children !== undefined && d.depth > 0; })  // exclude root and leaves -- only internal nodes
+            .append('rect')
+            .attr("class", "meta")
+            .attr("id", d => d.data.name)
+            .attr("transform", (d, i) => "translate("+ (d.x0 + 8) +"," + (d.y0 - (categories.length+1)*rect_height - 8) + ")")
+            .attr("width", function(d) { return d.x1 - d.x0; })
+            .attr("height", function(d) { return d.y1 - d.y0; })
+            .style("fill", d => category_colors[categories[d.depth-1]](d.data.name))
+            .call(d3.drag().on("start", drag_meta_start).on("drag", drag_meta).on("end", drag_meta_end))
+            .style("opacity", 0)
+            .transition(t_last)
+                .style("opacity", 1);
+        meta.enter()
+            .filter(function(d) { return d.children !== undefined && d.depth > 0; })
+            .append('text')
+            .attr("class", "category_label")
+            .attr("font-family", "sans-serif")
+            .text(d => d.data.name)
+            .style("text-anchor", "left")
+            .attr("transform", (d, i) => "translate("+ (d.x0 + 8 + 4) +"," + (d.y0 - (categories.length+1)*rect_height + 4) + ")")
+            .style("font-size", 10)
             .style("opacity", 0)
             .transition(t_last)
                 .style("opacity", 1);
 
+          // cell.append("clipPath")
+          //     .attr("id", function(d) { return "clip-" + d.id; })
+          //   .append("use")
+          //     .attr("xlink:href", function(d) { return "#rect-" + d.id + ""; });
 
-
+          // cell.append("text")
+          //     .attr("clip-path", function(d) { return "url(#clip-" + d.id + ")"; })
 
 
     }
@@ -412,7 +447,7 @@ function Heatmap(samples_by_genes_matrix, gene_sets, classes) {
 
 
     function drag_meta_start(d) {
-        // console.log(d);
+        console.log(d);
 
     }
     function drag_meta(d) {}

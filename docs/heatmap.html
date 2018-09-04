@@ -82,6 +82,29 @@
                             <br>
                             Along <input type="color" value="#0000cc" id="negative_color"> <input type="color" value="#c0c0c0" id="middle_color"> <input type="color" value="#cc0000" id="positive_color">
 
+                            <br>
+                            <div id="sampleLabels">
+                                <label>Sample Labels</label>
+                                <div class="form-check form-check-inline"><input class="form-check-input" type="radio" name="sampleLabels" id="before" value="before"> before</div>
+                                <div class="form-check form-check-inline"><input class="form-check-input" type="radio" name="sampleLabels" id="after" value="after" checked> after</div>
+                            </div>
+
+                            <br>
+                            <div id="geneLabels">
+                                <label>Gene Labels</label>
+                                <div class="form-check form-check-inline"><input class="form-check-input" type="radio" name="geneLabels" id="before" value="before" checked> before</div>
+                                <div class="form-check form-check-inline"><input class="form-check-input" type="radio" name="geneLabels" id="after" value="after"> after</div>
+                            </div>
+
+                            <div>
+                                <b><label for="cell_width">Cell Width</label></b>
+                                <input type="range" id="cell_width" name="" min="1" max="60" step="0.1" value="16">
+                            </div>
+
+                            <div>
+                                <b><label for="cell_height">Cell Height</label></b>
+                                <input type="range" id="cell_height" name="" min="1" max="60" step="0.1" value="16">
+                            </div>
 
                         </div>
 
@@ -124,7 +147,10 @@ else {
 
 $("#minimum_nonzero").attr('max', Object.keys(mouse_human_lee_merged_counts).length);
 
-heatmap = Heatmap(mouse_human_lee_merged_counts, human_gene_sets, mouse_human_lee_merged_classes);
+separate_by = ['system'];
+
+
+heatmap = Heatmap(mouse_human_lee_merged_counts, human_gene_sets, mouse_human_lee_merged_classes, separate_by);
 
 
 let equal = (a1, a2) => a1.length === a2.length && a1.every((value, i) => value === a2[i]);
