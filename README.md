@@ -1,8 +1,10 @@
 # ABCD1 Knockout Transcriptome
 
 
+separate by
 
-gGru
+
+gGru looks better
 
 
 legends

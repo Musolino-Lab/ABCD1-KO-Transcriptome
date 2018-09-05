@@ -251,8 +251,8 @@ function Heatmap(samples_by_genes_matrix, gene_sets, classes, separate_by) {
 
         rect = g.selectAll(".rect").data(flatten(ordered_gene_wise), idFunc);
         sNam = g.selectAll(".sNam").data(ordered_sample_ids, d => d);
-        gene = g.selectAll(".gene").data(genes.descendants(), idFunc);
-        meta = g.selectAll(".meta").data(metadata.descendants(), idFunc);
+        gene = g.selectAll(".gene").data(genes.descendants(), idFunc);  // needs to be better than idFunc
+        meta = g.selectAll(".meta").data(metadata.descendants(), idFunc);  // needs to be better than idFunc
 
         // phase 1
             // rectangles which are exiting fade out
@@ -320,7 +320,6 @@ function Heatmap(samples_by_genes_matrix, gene_sets, classes, separate_by) {
                 .style("opacity", 1);
         gene.enter()
             .filter(function(d) { return d.depth === 1; })  // gene sets
-            // .each(d => console.log(d))
             .append('rect')
             .attr("transform", function(d) { return "translate(" + (d.y0-200) + "," + (d.x0-2) + ")"; })
             .attr("width", function(d) { return d.y1 - d.y0; })
