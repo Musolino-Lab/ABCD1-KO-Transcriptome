@@ -268,8 +268,8 @@ function Heatmap(samples_by_genes_matrix, gene_sets, classes, separate_by) {
         // phase 3
             // re-arrange COLUMNS (rectangles, sample names, meta)
         rect.transition(t_last).attr('x', d => x[d.sample_id]+10);
-        meta.filter(d => d.height === 0).transition(t_last).attr('transform', d => "translate("+(x[d]+rect_width)+","+ordered_gene_ids.length*rect_height+")rotate(60)");
-        // meta.filter(function(d) { return d.children !== undefined && d.depth > 0; }).transition(t_last).attr('x', d => x(d[0])+10);
+        // meta.filter(d => d.height === 0).transition(t_last); change transform here
+        meta.filter(function(d) { return d.children !== undefined && d.depth > 0; }).transition(t_last).attr('x', d => d.x0 + 8 + 4);
         t_last = t_last.transition().duration(500);
 
         // phase 4
@@ -285,9 +285,8 @@ function Heatmap(samples_by_genes_matrix, gene_sets, classes, separate_by) {
             .attr('width', rect_width-2)
             .attr('height', rect_height-2)
             // .attr('fill', d => colors[values](d[values]))
-            .style("opacity", 0)
-            .transition(t_last)
-                .style("opacity", 1);
+            .style("opacity", 0).transition(t_last).style("opacity", 1);
+
 
         gene.enter()
             .filter(d => d.height === 0)  // leaves
@@ -303,12 +302,13 @@ function Heatmap(samples_by_genes_matrix, gene_sets, classes, separate_by) {
             .attr("dy", "0.8em")
             .on("click", (d) => GeneCards(d.data.gene))
             .call(d3.drag().on("start", drag_gene_start).on("drag", drag_gene).on("end", drag_gene_end))
-            .style("opacity", 0)
-            .transition(t_last)
-                .style("opacity", 1);
+            .style("opacity", 0).transition(t_last).style("opacity", 1);
+
         gene.enter()
             .filter(function(d) { return d.depth === 1; })  // gene sets
             .append('rect')
+            .attr('class', 'gene')
+            .attr('id', d => d.data.id)
             .attr('x', d => d.y0-200)
             .attr('y', d => d.x0)
             .attr("width", function(d) { return d.y1 - d.y0; })
@@ -316,14 +316,13 @@ function Heatmap(samples_by_genes_matrix, gene_sets, classes, separate_by) {
             .style('fill-opacity', 0)
             .style('stroke', 'black')
             .call(d3.drag().on("start", drag_gs_start).on("drag", drag_gs).on("end", drag_gs_end))
-            .style("opacity", 0)
-            .transition(t_last)
-                .style("opacity", 1);
+            .style("opacity", 0).transition(t_last).style("opacity", 1);
+
 
         meta.enter()
             .filter(d => d.height === 0)  // leaves
             .append('text')
-            .attr('class', 'sNam')
+            .attr('class', 'meta')
             .attr('id', d => d.data.id)
             .attr('transform', d => "translate("+(d.x0+rect_width)+","+ordered_gene_ids.length*rect_height+")rotate(60)")
             .text(d => d.data.name)
@@ -333,9 +332,8 @@ function Heatmap(samples_by_genes_matrix, gene_sets, classes, separate_by) {
             .style("text-anchor", "start")
             .attr("dy", "0.5em")
             .call(d3.drag().on("start", drag_sample_start).on("drag", drag_sample).on("end", drag_sample_end))
-            .style("opacity", 0)
-            .transition(t_last)
-                .style("opacity", 1);
+            .style("opacity", 0).transition(t_last).style("opacity", 1);
+
         meta.enter()
             .filter(function(d) { return d.children !== undefined && d.depth > 0; })  // internal nodes
             .append('rect')
@@ -347,13 +345,12 @@ function Heatmap(samples_by_genes_matrix, gene_sets, classes, separate_by) {
             .attr("height", function(d) { return d.y1 - d.y0; })
             .style("fill", d => category_colors[categories[d.depth-1]](d.data.name))
             .call(d3.drag().on("start", drag_meta_start).on("drag", drag_meta).on("end", drag_meta_end))
-            .style("opacity", 0)
-            .transition(t_last)
-                .style("opacity", 1);
+            .style("opacity", 0).transition(t_last).style("opacity", 1);
+
         meta.enter()
             .filter(function(d) { return d.children !== undefined && d.depth > 0; })  // internal nodes
             .append('text')
-            .attr("class", "category_label")
+            .attr("class", "meta")
             .attr("id", d => d.data.id)
             .attr('x', d => d.x0 + 8 + 4)
             .attr('y', d => d.y0 - (categories.length+1)*rect_height + 4)
@@ -361,9 +358,7 @@ function Heatmap(samples_by_genes_matrix, gene_sets, classes, separate_by) {
             .attr("font-family", "sans-serif")
             .style("text-anchor", "left")
             .style("font-size", 10)
-            .style("opacity", 0)
-            .transition(t_last)
-                .style("opacity", 1);
+            .style("opacity", 0).transition(t_last).style("opacity", 1);
 
           // cell.append("clipPath")
           //     .attr("id", function(d) { return "clip-" + d.id; })
