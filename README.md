@@ -16,3 +16,6 @@ transpose
 
 resize boxes
 
+
+drag
+

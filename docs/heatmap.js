@@ -51,6 +51,9 @@ function Heatmap(samples_by_genes_matrix, gene_sets, classes, separate_by) {
     var metadata = d3.hierarchy(hierarchy);
     var sample_to_sample_id = _.object(metadata.leaves().map(leaf => [leaf.data.name, leaf.data.id]));
 
+    var internal_node_ordering = _(categories_to_values_to_members).mapObject(values_to_members => _.object(Object.keys(values_to_members).map((value, i) => [value, i])));
+    metadata.each(node => { if (node.height !== 0 && node.depth !== 0) { node.data.order = internal_node_ordering[node.data.category][node.data.name]; } });
+
     var samples_to_bin = _(classes).mapObject(categories_to_values => Object.entries(_(categories_to_values).pick(separate_by)).sort().reduce((acc, [category, value]) => (acc ? acc+'-'+value : value), ''));
     var bin_to_samples = _(Object.keys(samples_to_bin)).groupBy(sample => samples_to_bin[sample]);
 
@@ -220,15 +223,12 @@ function Heatmap(samples_by_genes_matrix, gene_sets, classes, separate_by) {
                     if (sorting === 'complete') { permutation_order = reorder.optimal_leaf_order()(set_gene_values); } // get dendogram out?
                     else if (sorting === 'pc1') { permutation_order = reorder.sort_order(genes_pc1); }
 
-                    permutation_order = _.object(set_gene_ids, permutation_order);
-                    node.children.forEach((gene) => gene.data.order = permutation_order[gene.data.id])
-
-                    console.log(permutation_order);
+                    set_gene_ids = reorder.stablepermute(set_gene_ids, permutation_order);
+                    permutation_order = _.object(set_gene_ids.map((id, i) => [id, i]));
+                    node.children.forEach((gene) => gene.data.order = permutation_order[gene.data.id]);
 
                 }
             });
-
-            console.log(genes);
 
             Object.entries(small_bin_to_samples).forEach(([bin, samples]) => {
 
@@ -236,17 +236,19 @@ function Heatmap(samples_by_genes_matrix, gene_sets, classes, separate_by) {
                 sample_ids = samples.map(by_sample => by_sample[0].sample_id);
                 sample_values = samples.map(by_sample => by_sample.map(sample => sample[values]));
 
-                permutation_order = _.object(sample_ids, reorder.optimal_leaf_order()(sample_values));
-                metadata.leaves().forEach((sample) => sample.data.order = permutation_order[sample.data.name]);
+                permutation_order = reorder.optimal_leaf_order()(sample_values);
+                sample_ids = reorder.stablepermute(sample_ids, permutation_order);
+                permutation_order = _.object(sample_ids.map((id, i) => [id, i]));
+                metadata.leaves().forEach((sample) => { if (sample.data.id in permutation_order) {sample.data.order = permutation_order[sample.data.id]} });
 
             });
 
         }
 
-        genes = genes.count().sort(function(a, b) { return b.height - a.height || b.data.order - a.data.order; });
+        genes = genes.count().sort(function(a, b) { return b.height - a.height || a.data.order - b.data.order; });
         ordered_gene_ids = genes.leaves().map(leaf => leaf.data.id);
 
-        metadata = metadata.count().sort(function(a, b) { return b.height - a.height || b.data.order - a.data.order; });
+        metadata = metadata.count().sort(function(a, b) { return b.height - a.height || a.data.order - b.data.order; });
         ordered_sample_ids = metadata.leaves().map(leaf => leaf.data.id);
 
     }
@@ -337,7 +339,7 @@ function Heatmap(samples_by_genes_matrix, gene_sets, classes, separate_by) {
             .append('rect')
             .attr('class', 'gene')
             .attr('id', d => d.data.id)
-            .attr('x', d => d.y0-200)
+            .attr('x', d => -150)
             .attr('y', d => d.x0)
             .attr("width", function(d) { return d.y1 - d.y0; })
             .attr("height", function(d) { return d.x1 - d.x0; })
@@ -380,7 +382,7 @@ function Heatmap(samples_by_genes_matrix, gene_sets, classes, separate_by) {
                 .attr('class', 'category_label')
                 .text(d => d.data.name)
                 .attr("font-family", "sans-serif")
-                .style("text-anchor", "left")
+                .style("text-anchor", "start")
                 .style("font-size", 10)
                 .attr("dy", "1.2em")
                 .attr("dx", "0.2em")
@@ -415,8 +417,8 @@ function Heatmap(samples_by_genes_matrix, gene_sets, classes, separate_by) {
 
         colors = {
             zscore_stddev:  d3.scaleLinear().domain([d3.min(all_values, d => d.zscore_stddev), 0, d3.max(all_values, d => d.zscore_stddev)]).range([negative_color, middle_color, positive_color]),
-            // zscore_mad:     d3.scaleLinear().domain([d3.min(all_values, d => d.zscore_mad),    0, d3.max(all_values, d => d.zscore_mad)]   ).range([negative_color, middle_color, positive_color]),
-            // pc1:            d3.scaleLinear().domain([d3.min(all_values, d => d.pc1),           0, d3.max(all_values, d => d.pc1)]          ).range([negative_color, middle_color, positive_color]),
+            zscore_mad:     d3.scaleLinear().domain([d3.min(all_values, d => d.zscore_mad),    0, d3.max(all_values, d => d.zscore_mad)]   ).range([negative_color, middle_color, positive_color]),
+            pc1:            d3.scaleLinear().domain([d3.min(all_values, d => d.pc1),           0, d3.max(all_values, d => d.pc1)]          ).range([negative_color, middle_color, positive_color]),
         }
 
         g.selectAll(".rect")
