@@ -28,33 +28,6 @@ function Heatmap(samples_by_genes_matrix, gene_sets, classes, separate_by) {
         _(_(Object.entries(samples_to_values)).groupBy(([sample_id, value]) => value)).mapObject((arr_of_arr) => arr_of_arr.map(arr => arr[0]))
     );
 
-    var hierarchy = {'id':'metadata', 'children':[]};
-    Object.entries(classes).forEach(([sample_id, metadata]) => {
-        pointer = hierarchy.children;
-        prefix = 'metadata';
-        categories.forEach((category, i) => {
-            value = metadata[category];
-            prefix += '-'+safeStr(value);
-            existing_index_for_value = _(pointer).findIndex({'id':prefix});
-            if (existing_index_for_value > -1) {
-                if (i+1 === categories.length) { pointer[existing_index_for_value].children.push({'id':prefix+"-"+sample_id, 'name':sample_id}); }
-                else { pointer = pointer[existing_index_for_value].children; }
-            } else {
-                if (i+1 === categories.length) { pointer.push({'id':prefix,'name':value,'category':category,'children':[{'id':prefix+"-"+sample_id, 'name':sample_id}]}); }
-                else {
-                    pointer.push({'id':prefix,'name':value,'category':category,'children':[]});
-                    pointer = pointer[_(pointer).findIndex({'id':prefix})].children;
-                }
-            }
-        })
-    });
-
-    var metadata = d3.hierarchy(hierarchy);
-    var sample_to_sample_id = _.object(metadata.leaves().map(leaf => [leaf.data.name, leaf.data.id]));
-
-    var internal_node_ordering = _(categories_to_values_to_members).mapObject(values_to_members => _.object(Object.keys(values_to_members).map((value, i) => [value, i])));
-    metadata.each(node => { if (node.height !== 0 && node.depth !== 0) { node.data.order = internal_node_ordering[node.data.category][node.data.name]; } });
-
     var samples_to_bin = _(classes).mapObject(categories_to_values => Object.entries(_(categories_to_values).pick(separate_by)).sort().reduce((acc, [category, value]) => (acc ? acc+'-'+value : value), ''));
     var bin_to_samples = _(Object.keys(samples_to_bin)).groupBy(sample => samples_to_bin[sample]);
 
@@ -125,6 +98,10 @@ function Heatmap(samples_by_genes_matrix, gene_sets, classes, separate_by) {
     var ordered_gene_wise = [];
     var sample_wise = [];
     var sample_wise_indexer = {};
+    var metadata = {};
+    var sample_to_sample_id = {};
+    var x, y, category_y;
+
 
     var legend_color = g.append("g").attr("class", "legend legendColor");
 
@@ -155,7 +132,7 @@ function Heatmap(samples_by_genes_matrix, gene_sets, classes, separate_by) {
             Object.entries(genes).map(([gene, count]) => { return {
                 'id'        : sample+"_"+gene,
                 'sample'    : sample,
-                'sample_id' : sample_to_sample_id[sample],
+                'sample_id' : null,  // assigned later
                 'gene'      : gene,
                 'count'     : count,
             }})
@@ -201,6 +178,40 @@ function Heatmap(samples_by_genes_matrix, gene_sets, classes, separate_by) {
         sorting = sorting_;
         minimum_nonzero = minimum_nonzero_;
 
+        // METADATA
+
+        // to order the levels: change the order of categories
+
+        hierarchy = {'id':'metadata', 'children':[]};
+        Object.entries(classes).forEach(([sample_id, metadata]) => {
+            pointer = hierarchy.children;
+            prefix = 'metadata';
+            categories.forEach((category, i) => {
+                value = metadata[category];
+                prefix += '-'+safeStr(value);
+                existing_index_for_value = _(pointer).findIndex({'id':prefix});
+                if (existing_index_for_value > -1) {
+                    if (i+1 === categories.length) { pointer[existing_index_for_value].children.push({'id':prefix+"-"+sample_id, 'name':sample_id}); }
+                    else { pointer = pointer[existing_index_for_value].children; }
+                } else {
+                    if (i+1 === categories.length) { pointer.push({'id':prefix,'name':value,'category':category,'children':[{'id':prefix+"-"+sample_id, 'name':sample_id}]}); }
+                    else {
+                        pointer.push({'id':prefix,'name':value,'category':category,'children':[]});
+                        pointer = pointer[_(pointer).findIndex({'id':prefix})].children;
+                    }
+                }
+            })
+        });
+
+        metadata = d3.hierarchy(hierarchy);
+        sample_to_sample_id = _.object(metadata.leaves().map(leaf => [leaf.data.name, leaf.data.id]));
+        sample_wise.forEach(by_sample => by_sample.forEach(sample => sample.sample_id = sample_to_sample_id[sample.sample]));
+
+        internal_node_ordering = _(categories_to_values_to_members).mapObject(values_to_members => _.object(Object.keys(values_to_members).map((value, i) => [value, i])));
+        metadata.each(node => { if (node.height !== 0 && node.depth !== 0) { node.data.order = internal_node_ordering[node.data.category][node.data.name]; } });
+
+        // GENES
+
         // Filter by number non-zeros
         ordered_gene_wise = genes.leaves().map(leaf => gene_wise[gene_wise_indexer[leaf.data.gene]].map(sample => Object.assign({'gene_id':leaf.data.id}, sample)));
 
@@ -230,6 +241,8 @@ function Heatmap(samples_by_genes_matrix, gene_sets, classes, separate_by) {
 
                 }
             });
+
+            // SAMPLES
 
             Object.entries(small_bin_to_samples).forEach(([bin, samples]) => {
 
@@ -273,7 +286,6 @@ function Heatmap(samples_by_genes_matrix, gene_sets, classes, separate_by) {
             if (node.depth !== current_depth) { current_depth = node.depth; counter = 0; }
             node.sibling_index = counter; counter += 1;
 
-            node.offset = 0;
             if (node.parent) {
                 node.num_left = node.parent.children.filter(sibling => sibling.sibling_index !== undefined && sibling.sibling_index < node.sibling_index)
                                                     .reduce((acc, sibling) => sum_counts_objects(acc, sibling.num_below), {});
@@ -281,6 +293,10 @@ function Heatmap(samples_by_genes_matrix, gene_sets, classes, separate_by) {
                 node.offset = d3.sum(Object.entries(node.num_left).map(([level, num]) => (margin[level] || 0)*(num))) + node.parent.offset;
                 node.x0 += node.offset;
                 node.x1 += node.offset + d3.sum(Object.entries(node.num_below).map(([level, num]) => (margin[level] || 0)*(num-1)));
+            } else {
+                node.offset = 0;
+                node.num_left = 0;
+                node.x1 += d3.sum(Object.entries(node.num_below).map(([level, num]) => (margin[level] || 0)*(num-1)));
             }
 
         });
@@ -288,12 +304,12 @@ function Heatmap(samples_by_genes_matrix, gene_sets, classes, separate_by) {
 
         x = _.object(metadata.leaves().map(leaf => [leaf.data.id, leaf.x0]))
         y = _.object(genes.leaves().map(leaf => [leaf.data.id, leaf.x0]))
-
-        category_y = (category) => -20*categories.indexOf(category);
+        category_y = _.object(categories.map((category, i) => [category, -((categories.length-i) * rect_height)]));
 
         rect = g.selectAll(".rect").data(flatten(ordered_gene_wise), d => d.id);
         gene = g.selectAll(".gene").data(genes.descendants(), d => d.data.id);
         meta = g.selectAll(".meta").data(metadata.descendants(), d => d.data.id);
+        catg = g.selectAll(".catg").data(categories, d => d);
 
         // phase 1
             // rectangles which are exiting fade out
@@ -304,6 +320,7 @@ function Heatmap(samples_by_genes_matrix, gene_sets, classes, separate_by) {
             rect.exit().transition(t_last).style("opacity", 0).remove();
             gene.exit().transition(t_last).style("opacity", 0).remove();
             meta.exit().transition(t_last).style("opacity", 0).remove();
+            catg.exit().transition(t_last).style("opacity", 0).remove();
             t_last = t_last.transition().duration(500);
         }
 
@@ -392,8 +409,8 @@ function Heatmap(samples_by_genes_matrix, gene_sets, classes, separate_by) {
             .append("g")
             .attr("class", "meta")
             .attr("id", d => d.data.id)
-            .attr('transform', d => 'translate('+d.x0+','+(d.y0 - (categories.length+1)*rect_height - 8)+')')
-            // .attr('transform', d => 'translate('+d.x0+','+category_y(d.data.category)+')')
+            // .attr('transform', d => 'translate('+d.x0+','+(d.y0 - (categories.length+1)*rect_height - 8)+')')
+            .attr('transform', d => 'translate('+d.x0+','+category_y[d.data.category]+')')
             .call(d3.drag().on("start", drag_meta_start).on("drag", drag_meta).on("end", drag_meta_end))
                 .append('rect')
                 .attr('class', 'category_box')
@@ -420,14 +437,18 @@ function Heatmap(samples_by_genes_matrix, gene_sets, classes, separate_by) {
             .select(function() { return this.parentNode; })
             .style("opacity", 0).transition(t_last).style("opacity", 1);
 
-          // cell.append("clipPath")
-          //     .attr("id", function(d) { return "clip-" + d.id; })
-          //   .append("use")
-          //     .attr("xlink:href", function(d) { return "#rect-" + d.id + ""; });
+        console.log(metadata.num_below);
 
-          // cell.append("text")
-          //     .attr("clip-path", function(d) { return "url(#clip-" + d.id + ")"; })
-
+        catg.enter()
+            .append("text")
+            .attr("class", "catg")
+            .attr("id", d => d)
+            .text(d => d)
+            .attr("x", metadata.x1+10)
+            .attr("y", d => category_y[d])
+            .attr("dy", "0.8em")
+            .call(d3.drag().on("start", drag_catg_start).on("drag", drag_catg).on("end", drag_catg_end))
+            .style("opacity", 0).transition(t_last).style("opacity", 1);
 
 
     style();
@@ -543,6 +564,13 @@ function Heatmap(samples_by_genes_matrix, gene_sets, classes, separate_by) {
     }
     function drag_gs(d) {}
     function drag_gs_end(d) {}
+
+    function drag_catg_start(d) {
+        console.log(d);
+
+    }
+    function drag_catg(d) {}
+    function drag_catg_end(d) {}
 
     /////////////////////////////////////////////////////////////////////////////
                           ///////    Brush Axes    ///////

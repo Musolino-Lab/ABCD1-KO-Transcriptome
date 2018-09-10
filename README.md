@@ -3,7 +3,6 @@
 
 Lets do stuff for UI pretty:
 - gene set box looks better
-- add back the level names
 
 
 legends
@@ -17,3 +16,5 @@ resize boxes
 
 drag
 
+
+hover
