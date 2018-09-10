@@ -5,6 +5,7 @@ let clamp = (min, max) => ((x) => Math.min(Math.max(x, min), max));
 let transpose = (array) => array[0].map((col, i) => array.map(row => row[i]));
 let flatten = (array) => [].concat.apply([], array);
 let safeStr = (str) => str.split(' (')[0].replace(/\ /gi, '_');
+let sum_counts_objects = (a, b) => _.object(_.uniq(Object.keys(a).concat(Object.keys(b))).map(key => [key, (a[key] || 0) + (b[key] || 0)]));
 
 function Heatmap(samples_by_genes_matrix, gene_sets, classes, separate_by) {
 
@@ -255,6 +256,8 @@ function Heatmap(samples_by_genes_matrix, gene_sets, classes, separate_by) {
 
     function render({}={}) {
 
+        margin = {'2': 10};
+
         metadata_across = rect_width*(categories.length+2);
         metadata_topdown = rect_height*ordered_sample_ids.length+2;
         d3.partition().size([metadata_topdown, metadata_across]).padding(2).round(true)(metadata);
@@ -262,6 +265,26 @@ function Heatmap(samples_by_genes_matrix, gene_sets, classes, separate_by) {
         genes_across = (rect_height*ordered_gene_ids.length)+2;
         genes_topdown = 200;
         d3.partition().size([genes_across, genes_topdown]).padding(2).round(true)(genes);
+
+        counter = 0; current_depth = 0;
+        metadata.each((node) => {
+            node.num_below = _(node.descendants().map(d => d.height)).countBy();
+
+            if (node.depth !== current_depth) { current_depth = node.depth; counter = 0; }
+            node.sibling_index = counter; counter += 1;
+
+            node.offset = 0;
+            if (node.parent) {
+                node.num_left = node.parent.children.filter(sibling => sibling.sibling_index !== undefined && sibling.sibling_index < node.sibling_index)
+                                                    .reduce((acc, sibling) => sum_counts_objects(acc, sibling.num_below), {});
+
+                node.offset = d3.sum(Object.entries(node.num_left).map(([level, num]) => (margin[level] || 0)*(num))) + node.parent.offset;
+                node.x0 += node.offset;
+                node.x1 += node.offset + d3.sum(Object.entries(node.num_below).map(([level, num]) => (margin[level] || 0)*(num-1)));
+            }
+
+        });
+
 
         x = _.object(metadata.leaves().map(leaf => [leaf.data.id, leaf.x0]))
         y = _.object(genes.leaves().map(leaf => [leaf.data.id, leaf.x0]))
