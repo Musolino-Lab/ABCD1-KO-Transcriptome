@@ -18,3 +18,14 @@ drag
 
 
 hover
+
+
+gene / gene set selection UI
+
+
+colors
+
+
+PC1
+
+
