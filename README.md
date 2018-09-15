@@ -31,3 +31,6 @@ colors
 PC1
 
 
+remove genes / gene sets / samples / sample sets
+
+
