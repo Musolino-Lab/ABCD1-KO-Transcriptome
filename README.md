@@ -1,8 +1,13 @@
 # ABCD1 Knockout Transcriptome
 
 
-Lets do stuff for UI pretty:
-- gene set box looks better
+spacing between gene sets
+
+drag
+- drag gene sets
+- drag samples
+- drag meta inside parent meta
+
 
 
 legends
@@ -12,9 +17,6 @@ transpose
 
 
 resize boxes
-
-
-drag
 
 
 hover

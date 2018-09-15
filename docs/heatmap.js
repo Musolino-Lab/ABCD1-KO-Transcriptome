@@ -8,6 +8,8 @@ let safeStr = (str) => str.split(' (')[0].replace(/\ /gi, '_');
 let sum_counts_objects = (a, b) => _.object(_.uniq(Object.keys(a).concat(Object.keys(b))).map(key => [key, (a[key] || 0) + (b[key] || 0)]));
 let pointing_right = (d) => ''+((d.x1 - d.x0) * 1 + (d.y1 - d.y0) * 1)+','+(d.x1 - d.x0);  // https://stackoverflow.com/questions/8976791/how-to-set-a-stroke-width1-on-only-certain-sides-of-svg-shapes
 let pointing_left = (d) => '0,'+((d.x1 - d.x0) * 1)+','+((d.x1 - d.x0) * 1 + (d.y1 - d.y0) * 2);
+if (!Array.prototype.last) { Array.prototype.last = function() { return this[this.length - 1]; }; };
+
 
 function Heatmap(samples_by_genes_matrix, gene_sets, classes, separate_by) {
 
@@ -262,10 +264,10 @@ function Heatmap(samples_by_genes_matrix, gene_sets, classes, separate_by) {
 
         }
 
-        genes = genes.count().sort(function(a, b) { return b.height - a.height || a.data.order - b.data.order; });
+        genes.count().sort(function(a, b) { return b.height - a.height || a.data.order - b.data.order; });
         ordered_gene_ids = genes.leaves().map(leaf => leaf.data.id);
 
-        metadata = metadata.count().sort(function(a, b) { return b.height - a.height || a.data.order - b.data.order; });
+        metadata.count().sort(function(a, b) { return b.height - a.height || a.data.order - b.data.order; });
         ordered_sample_ids = metadata.leaves().map(leaf => leaf.data.id);
 
     }
@@ -515,57 +517,68 @@ function Heatmap(samples_by_genes_matrix, gene_sets, classes, separate_by) {
                           ///////    Drag Axes    ///////
     /////////////////////////////////////////////////////////////////////////////
 
-    function drag_gene_start(d) {
+    // Drag gene
 
-
-        // console.log(ordered_gene_wise);
-
-    }
+    function drag_gene_start(d) {}
 
     function drag_gene(d) {
 
-        dragged_index = _(ordered_gene_wise).findIndex((gene) => gene.gene === d);
-        // console.log(dragged_index);
+        index_of_dragging_gene = d.data.order;
+        current_position_of_dragging_gene = d3.event.y;
+        original_position_of_dragging_gene = y[d.data.id];
 
-        // g.select("#"+d).attr("transform", function(d, i) { return "translate(0," +  expr(i) + ")" });
-        // g.selectAll(".rect").attr("transform", function(d, i) { return "translate(0," + (expr(i) - max_point_radius) + ")" });
+        set_genes = genes.leaves().filter(gene => gene.parent.id === d.parent.id);
 
+        let expr = (gene) => {
 
-        // let expr = (current_index) => {
-        //     if (current_index < dragged_index) {
-        //         if (current_index < ((d3.event.y-s()/2) / s())) {
-        //                 return y(current_index);
-        //             } else {
-        //                 return y(current_index) + s();
-        //             }
-        //     } else {  // current_index >= dragged_index
-        //         if (current_index < ((d3.event.y+s()/2) / s())) {
-        //                 return y(current_index) - s();
-        //             } else {
-        //                 return y(current_index);
-        //             }
-        //     }
-        // }
+            index_of_other_gene = gene.data.order;
+            original_position_of_other_gene = y[gene.data.id];
 
+            if (index_of_other_gene < index_of_dragging_gene && current_position_of_dragging_gene < original_position_of_other_gene + rect_height/2) {
+                return original_position_of_other_gene + rect_height;
+            }
 
-        // d3.select(this).attr("transform", "translate(0," + d3.event.y + ")");
-        // d3.select(".dots#"+d[0]).attr("transform", (d, i) => "translate(0," + (d3.event.y - max_point_radius) + ")");
+            if (index_of_other_gene > index_of_dragging_gene && current_position_of_dragging_gene > original_position_of_other_gene - rect_height/2) {
+                return original_position_of_other_gene - rect_height;
+            }
+
+            if (index_of_other_gene !== index_of_dragging_gene) { return original_position_of_other_gene; }
+
+            if (index_of_other_gene === index_of_dragging_gene) { return clamp(set_genes[0].x0, set_genes.last().x0)(d3.event.y) }
+        };
+
+        updated_y = _.object(set_genes.map(gene => gene.data.gene), set_genes.map(expr));
+
+        g.selectAll(".gene").filter(gene => gene.height === 0 && gene.parent.id === d.parent.id).each(gene => {gene.x0 = updated_y[gene.data.gene]}).attr("y", gene => gene.x0);
+        g.selectAll(".rect").attr("y", (d) => updated_y[d.gene]);
 
     }
 
     function drag_gene_end(d) {
 
-        // dragged_index = _(ordered_gene_wise).findIndex((gene) => gene.id === d[0]);
-        // old_index = dragged_index;
-        // new_index = clamp(0, ordered_gene_wise.length)(Math.round(d3.event.y / s()));
+        set_genes = genes.leaves().filter(gene => gene.parent.id === d.parent.id);
 
-        // ordered_gene_wise.splice(new_index, 0, ordered_gene_wise.splice(old_index, 1)[0]);
-        // sample_wise.forEach((sample) => sample.genes.splice(new_index, 0, sample.genes.splice(old_index, 1)[0]));
+        new_order = _.object(set_genes.filter(gene => gene.data.id !== d.data.id)
+                                      .map(gene => [gene.x0, gene.data.id])
+                                      .concat([[d3.event.y, d.data.id]])
+                                      .sort((a, b) => a[0] - b[0])
+                                      .map(([y, id], i) => [id, i]));
 
-        // render();
+        set_genes.forEach(gene => { gene.data.order = new_order[gene.data.id] });
+
+        old_index = ordered_gene_ids.indexOf(d.data.id);
+        genes.sort(function(a, b) { return b.height - a.height || a.data.order - b.data.order; });
+        ordered_gene_ids = genes.leaves().map(leaf => leaf.data.id);
+        new_index = ordered_gene_ids.indexOf(d.data.id);
+
+        ordered_gene_wise.splice(new_index, 0, ordered_gene_wise.splice(old_index, 1)[0]);
+        sample_wise.forEach((sample) => sample.splice(new_index, 0, sample.splice(old_index, 1)[0]));
+
+        render();
 
     }
 
+    // Drag sample
 
     function drag_sample_start(d) {
         // console.log(sample_wise);
@@ -574,6 +587,7 @@ function Heatmap(samples_by_genes_matrix, gene_sets, classes, separate_by) {
     function drag_sample(d) {}
     function drag_sample_end(d) {}
 
+    // Drag meta
 
     function drag_meta_start(d) {
         console.log(d);
@@ -582,12 +596,16 @@ function Heatmap(samples_by_genes_matrix, gene_sets, classes, separate_by) {
     function drag_meta(d) {}
     function drag_meta_end(d) {}
 
+    // Drag gene set
+
     function drag_gs_start(d) {
         console.log(d);
 
     }
     function drag_gs(d) {}
     function drag_gs_end(d) {}
+
+    // Drag category
 
     function drag_catg_start(d) {
         console.log(d);
