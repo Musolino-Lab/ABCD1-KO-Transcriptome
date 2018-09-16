@@ -190,10 +190,11 @@ function gene_set_list_change(e) {
     keys = this.value.split(',').map(s => s.trim()).filter(s => s);
     filtered_selected_gene_sets = selected_gene_sets.filter(gs => gs.gene_set_name === null || keys.includes(gs.gene_set_name));
     if (!_.isEqual(selected_gene_sets, filtered_selected_gene_sets)) {
-        heatmap.restart({'selected_gene_sets_':filtered_selected_gene_sets});
+        selected_gene_sets = filtered_selected_gene_sets;
+        heatmap.restart({'selected_gene_sets_':selected_gene_sets});
     }
 }
-gene_set_list_change_debounced = _.debounce(gene_set_list_change, 1000)
+gene_set_list_change_debounced = _.debounce(gene_set_list_change, 500)
 $('#chooseGeneSet').change(gene_set_list_change_debounced);
 
 
