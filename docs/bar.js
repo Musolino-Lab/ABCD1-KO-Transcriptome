@@ -173,7 +173,11 @@ function Bar(differential) {
 
     function wheeled() {
         current_transform = d3.zoomTransform(g);
-        current_transform.y = clamp(-(g.node().getBBox().height-window.innerHeight-100), 100)(current_transform.y - d3.event.deltaY);
+        if (d3.event.ctrlKey) {
+            current_transform.k = clamp(0.1, 5)(current_transform.k - d3.event.deltaY * 0.01);
+        } else {
+            current_transform.y = clamp(-(ordered_gene_ids.length*rect_height-100), h)(current_transform.y - d3.event.deltaY);
+        }
         g.attr("transform", current_transform);
     }
 
@@ -186,6 +190,8 @@ function Bar(differential) {
     d3.select(window).on("resize", resize)
 
     resize();
+
+
 
     return {
         'restart': restart,
