@@ -332,59 +332,57 @@ function Heatmap(samples_by_genes_matrix, gene_sets, classes, separate_by) {
         }
 
         // phase 2
-            // re-arrange ROWS (rectangles, gene symbols, gene groups)
+            // re-arrange ROWS
         rect.transition(t_last).attr('y', d => y[d.gene_id])
         gene.filter(node => node.height === 0).transition(t_last).attr('y', d => y[d.data.id])
-        // gene.filter(gene => gene.height !== 0).transition(t_last).attr('y', d => y[d.data.id])                       // TODO
-        meta.filter(node => node.height === 0).transition(t_last).attr('y', d => ordered_gene_ids.length*rect_height)                                       // TODO
-                                                           .attr('transform', d => 'rotate(60,'+d.x0+','+ordered_gene_ids.length*rect_height+')');           // TODO
+        gene.filter(gene => gene.height === 1).transition(t_last).attr('transform', d => 'translate(-100,'+d.x1+')rotate(-90)')
         t_last = t_last.transition().duration(500);
 
         // phase 3
-            // re-arrange COLUMNS (rectangles, sample names, meta)
+            // re-arrange COLUMNS
         rect.transition(t_last).attr('x', d => x[d.sample_id]);
-        meta.filter(d => d.height === 0).transition(t_last); // change transform here                       // TODO
-        meta.filter(node => node.depth > 0 && node.height > 0).transition(t_last).attr('x', d => d.x0);     // TODO
+        meta.filter(node => node.height === 0).transition(t_last).attr('x', d => d.x0)
+                                                                 .attr('y', genes.x1+10)
+                                                                 .attr('transform', d => 'rotate(60,'+d.x0+','+(genes.x1+10)+')');
+        meta.filter(node => node.depth > 0 && node.height > 0).transition(t_last).attr('x', d => d.x0);
         meta.filter(node => node.depth > 0 && node.height > 0).selectAll('.category_box').transition(t_last).attr('width', d => d.x1 - d.x0);
         t_last = t_last.transition().duration(500);
 
 
-        var drag_gene_start   = drag_leaf_start(genes, 'y', 'gene');
-        var drag_gene         = drag_leaf(      genes, 'y', 'gene', '.gene');
-        var drag_gene_end     = drag_leaf_end(  genes, 'y', ordered_gene_ids, ordered_gene_wise, sample_wise);
+        var drag_gene_start   = (d) => drag_leaf_start(d, genes, 'y', 'gene');
+        var drag_gene         = (d) => drag_leaf(      d, genes, 'y', y, 'gene', '.gene');
+        var drag_gene_end     = (d) => drag_leaf_end(  d, genes, 'y', ordered_gene_ids, ordered_gene_wise, sample_wise);
 
-        var drag_sample_start = drag_leaf_start(metadata, 'x', 'sample');
-        var drag_sample       = drag_leaf(      metadata, 'x', 'sample', '.meta');
-        var drag_sample_end   = drag_leaf_end(  metadata, 'x', ordered_sample_ids, sample_wise, ordered_gene_wise);
+        var drag_sample_start = (d) => drag_leaf_start(d, metadata, 'x', 'sample');
+        var drag_sample       = (d) => drag_leaf(      d, metadata, 'x', x, 'sample', '.meta');
+        var drag_sample_end   = (d) => drag_leaf_end(  d, metadata, 'x', ordered_sample_ids, sample_wise, ordered_gene_wise);
 
-        var drag_gs_start     = drag_internal_node_start(genes, 'y');
-        var drag_gs           = drag_internal_node(genes, 'y');
-        var drag_gs_end       = drag_internal_node_end(genes, 'y');
+        var drag_gs_start     = (d) => drag_node_start(d, genes, 'y');
+        var drag_gs           = (d) => drag_node(      d, genes, 'y');
+        var drag_gs_end       = (d) => drag_node_end(  d, genes, 'y');
 
-        var drag_meta_start   = drag_internal_node_start(metadata, 'x');
-        var drag_meta         = drag_internal_node(metadata, 'x');
-        var drag_meta_end     = drag_internal_node_end(metadata, 'x');
+        var drag_meta_start   = (d) => drag_node_start(d, metadata, 'x');
+        var drag_meta         = (d) => drag_node(      d, metadata, 'x');
+        var drag_meta_end     = (d) => drag_node_end(  d, metadata, 'x');
 
         // phase 4
             // rectangles which are entering get appended
-            // gene names which are entering get appended
-            // gene groups which are entering get appended
+            // gene names / groups which are entering get appended
+            // sample names / groups which are entering get appended
         meta.enter()
             .filter(d => d.height === 0)  // leaves
             .append('text')
             .attr('class', 'meta')
             .attr('id', d => d.data.id)
             .attr('x', d => d.x0)
-            .attr('y', d => ordered_gene_ids.length*rect_height)
-            .attr('transform', d => 'rotate(60,'+d.x0+','+ordered_gene_ids.length*rect_height+')')
+            .attr('y', genes.x1+10)
+            .attr('transform', d => 'rotate(60,'+d.x0+','+(genes.x1+10)+')')
             .text(d => d.data.name)
             .attr('font-family', 'sans-serif')
             .style('font-weight', 300)
             .style('cursor', 'pointer')
             .style('text-anchor', 'start')
-            .attr('dy', '0.8em')
-            .attr('dx', '0.4em')
-            .call(d3.drag().on('start', drag_sample_start).on('drag', (d) => drag_sample(d, x)).on('end', drag_sample_end))
+            .call(d3.drag().on('start', drag_sample_start).on('drag', drag_sample).on('end', drag_sample_end))
             .style('opacity', 0).transition(t_last).style('opacity', 1);
 
         meta.enter()
@@ -445,7 +443,7 @@ function Heatmap(samples_by_genes_matrix, gene_sets, classes, separate_by) {
             .style('text-anchor', 'end')
             .attr('dy', '0.8em')
             .on('click', (d) => GeneCards(d.data.name))
-            .call(d3.drag().on('start', drag_gene_start).on('drag', (d) => drag_gene(d, y)).on('end', drag_gene_end))
+            .call(d3.drag().on('start', drag_gene_start).on('drag', drag_gene).on('end', drag_gene_end))
             .style('opacity', 0).transition(t_last).style('opacity', 1);
 
         gene.enter()
@@ -536,90 +534,91 @@ function Heatmap(samples_by_genes_matrix, gene_sets, classes, separate_by) {
                           ///////    Drag Axes    ///////
     /////////////////////////////////////////////////////////////////////////////
 
-    function drag_leaf_start(hierarchy, xy, attr) { return function(d) {}; }
+    function drag_leaf_start(d, hierarchy, xy, attr) { }
 
-    function drag_leaf(hierarchy, xy, attr, svg_class) {
+    function drag_leaf(d, hierarchy, xy, axis, attr, svg_class) {
 
-        return function(d, axis) {
+        index_of_dragging_leaf = d.data.order;
+        current_position_of_dragging_leaf = d3.event[xy]; // some trig function on d3.event[xy], d.x0, angle
 
-            index_of_dragging_leaf = d.data.order;
-            current_position_of_dragging_leaf = d3.event[xy];
+        set_leaves = hierarchy.leaves().filter(leaf => leaf.parent.data.id === d.parent.data.id);
 
-            set_leaves = hierarchy.leaves().filter(leaf => leaf.parent.data.id === d.parent.data.id);
+        let expr = (leaf) => {
 
-            let expr = (leaf) => {
+            index_of_other_leaf = leaf.data.order;
+            original_position_of_other_leaf = axis[leaf.data.id];
 
-                index_of_other_leaf = leaf.data.order;
-                original_position_of_other_leaf = axis[leaf.data.id];
+            if (index_of_other_leaf < index_of_dragging_leaf && current_position_of_dragging_leaf < original_position_of_other_leaf + rect_height/2) {
+                return original_position_of_other_leaf + rect_height;
+            }
 
-                if (index_of_other_leaf < index_of_dragging_leaf && current_position_of_dragging_leaf < original_position_of_other_leaf + rect_height/2) {
-                    return original_position_of_other_leaf + rect_height;
-                }
+            if (index_of_other_leaf > index_of_dragging_leaf && current_position_of_dragging_leaf > original_position_of_other_leaf - rect_height/2) {
+                return original_position_of_other_leaf - rect_height;
+            }
 
-                if (index_of_other_leaf > index_of_dragging_leaf && current_position_of_dragging_leaf > original_position_of_other_leaf - rect_height/2) {
-                    return original_position_of_other_leaf - rect_height;
-                }
+            if (index_of_other_leaf !== index_of_dragging_leaf) { return original_position_of_other_leaf; }
 
-                if (index_of_other_leaf !== index_of_dragging_leaf) { return original_position_of_other_leaf; }
+            if (index_of_other_leaf === index_of_dragging_leaf) { return clamp(leaf.parent.x0, leaf.parent.x1-rect_height+2)(current_position_of_dragging_leaf) }
+        };
 
-                if (index_of_other_leaf === index_of_dragging_leaf) { return clamp(leaf.parent.x0, leaf.parent.x1-rect_height+2)(current_position_of_dragging_leaf) }
-            };
+        updated_xy = _.object(set_leaves.map(leaf => leaf.data.id), set_leaves.map(expr));
 
-            updated_xy = _.object(set_leaves.map(leaf => leaf.data.id), set_leaves.map(expr));
+        g.selectAll(svg_class).filter(leaf => leaf.height === 0 && leaf.parent.data.id === d.parent.data.id).each(leaf => {leaf.x0 = updated_xy[leaf.data.id]}).attr(xy, leaf => leaf.x0);
+        g.selectAll(".rect").filter(rect => updated_xy[rect[attr+'_id']]).attr(xy, (rect) => updated_xy[rect[attr+'_id']]);
 
-            g.selectAll(svg_class).filter(leaf => leaf.height === 0 && leaf.parent.data.id === d.parent.data.id).each(leaf => {leaf.x0 = updated_xy[leaf.data.id]}).attr(xy, leaf => leaf.x0);
-            g.selectAll(".rect").filter(rect => updated_xy[rect[attr+'_id']]).attr(xy, (rect) => updated_xy[rect[attr+'_id']]);
+        angle = 60;
+        if (xy === 'x') { g.selectAll(svg_class).filter(node => node.height === 0).attr('transform', function(leaf) { return 'rotate('+angle+','+leaf.x0+','+(genes.x1+10)+')' }); }
 
-            angle = 60;
-            if (xy === 'x') { g.selectAll(svg_class).attr('transform', function(leaf) { return 'rotate('+angle+','+leaf.x0+','+d3.select(this).attr('transform').split(',').last().split(')')[0]+')' }); }
-
-        }
 
     }
 
-    function drag_leaf_end(hierarchy, xy, ordered_this_ids, this_wise, other_wise) {
+    function drag_leaf_end(d, hierarchy, xy, ordered_this_ids, this_wise, other_wise) {
 
-        return function(d) {
+        set_leaves = hierarchy.leaves().filter(gene => gene.parent.data.id === d.parent.data.id);
 
-            set_leaves = hierarchy.leaves().filter(gene => gene.parent.data.id === d.parent.data.id);
+        current_position_of_dragging_leaf = d3.event[xy]; // some trig function on d3.event[xy], d.x0, angle
 
-            new_order = _.object(set_leaves.filter(leaf => leaf.data.id !== d.data.id)
-                                           .map(leaf => [leaf.x0, leaf.data.id])
-                                           .concat([[d3.event.y, d.data.id]])
-                                           .sort((a, b) => a[0] - b[0])
-                                           .map(([y, id], i) => [id, i]));
+        new_order = _.object(set_leaves.filter(leaf => leaf.data.id !== d.data.id)
+                                       .map(leaf => [leaf.x0, leaf.data.id])
+                                       .concat([[current_position_of_dragging_leaf, d.data.id]])
+                                       .sort((a, b) => a[0] - b[0])
+                                       .map(([y, id], i) => [id, i]));
 
-            set_leaves.forEach(leaf => { leaf.data.order = new_order[leaf.data.id] });
+        hierarchy.each(leaf => { if (leaf.data.id && Object.keys(new_order).includes(leaf.data.id)) { leaf.data.order = new_order[leaf.data.id]} });
 
-            old_index = ordered_this_ids.indexOf(d.data.id);
-            hierarchy.sort(function(a, b) { return b.height - a.height || a.data.order - b.data.order; });
-            ordered_this_ids = hierarchy.leaves().map(leaf => leaf.data.id);
-            new_index = ordered_this_ids.indexOf(d.data.id);
+        old_index = ordered_this_ids.indexOf(d.data.id);
+        hierarchy.sort(function(a, b) { return b.height - a.height || a.data.order - b.data.order; });
+        ordered_this_ids = hierarchy.leaves().map(leaf => leaf.data.id);   //// THIS IS A BUG -- IT ONLY CHANGES THE LOCAL COPY!!!
+        new_index = ordered_this_ids.indexOf(d.data.id);
 
-            this_wise.splice(new_index, 0, this_wise.splice(old_index, 1)[0]);
-            // other_wise.forEach((other) => other.splice(new_index, 0, other.splice(old_index, 1)[0]));
+        this_wise.splice(new_index, 0, this_wise.splice(old_index, 1)[0]);
+        other_wise.forEach((other) => other.splice(new_index, 0, other.splice(old_index, 1)[0]));
 
-            render();
-
-        }
+        render();
 
     }
 
 
-    function drag_internal_node_start(hierarchy, xy, attr) {
+    function drag_node_start(hierarchy, xy, attr) { return function(d) {}; }
+
+    function drag_node(hierarchy, xy, attr) {
+
         return function(d) {
+
+
+
+
 
         }
     }
 
-    function drag_internal_node(hierarchy, xy, attr) {
+    function drag_node_end(hierarchy, xy, attr) {
+
         return function(d) {
 
-        }
-    }
 
-    function drag_internal_node_end(hierarchy, xy, attr) {
-        return function(d) {
+
+
 
         }
     }

@@ -5,7 +5,6 @@ spacing between gene sets
 
 drag
 - drag gene sets
-- drag samples
 - drag meta inside parent meta
 
 
