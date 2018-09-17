@@ -8,8 +8,8 @@ let safeStr = (str) => str.split(' (')[0].replace(/\ /gi, '_');
 let sum_counts_objects = (a, b) => _.object(_.uniq(Object.keys(a).concat(Object.keys(b))).map(key => [key, (a[key] || 0) + (b[key] || 0)]));
 let pointing_right = (d) => ''+((d.x1 - d.x0) * 1 + (d.y1 - d.y0) * 1)+','+(d.x1 - d.x0);  // https://stackoverflow.com/questions/8976791/how-to-set-a-stroke-width1-on-only-certain-sides-of-svg-shapes
 let pointing_left = (d) => '0,'+((d.x1 - d.x0) * 1)+','+((d.x1 - d.x0) * 1 + (d.y1 - d.y0) * 2);
-if (!Array.prototype.last) { Array.prototype.last = function() { return this[this.length - 1]; }; };
-
+Array.prototype.last = function() { return this[this.length - 1]; };
+Array.prototype.move = function(from, to) { this.splice(to, 0, this.splice(from, 1)[0]); };
 
 function Heatmap(samples_by_genes_matrix, gene_sets, classes, separate_by) {
 
@@ -539,7 +539,7 @@ function Heatmap(samples_by_genes_matrix, gene_sets, classes, separate_by) {
     function drag_leaf(d, hierarchy, xy, axis, attr, svg_class) {
 
         index_of_dragging_leaf = d.data.order;
-        current_position_of_dragging_leaf = d3.event[xy]; // some trig function on d3.event[xy], d.x0, angle
+        current_position_of_dragging_leaf = d.x0 + (xy === 'x' ? d3.event.dx : d3.event.dy);
 
         set_leaves = hierarchy.leaves().filter(leaf => leaf.parent.data.id === d.parent.data.id);
 
@@ -567,7 +567,7 @@ function Heatmap(samples_by_genes_matrix, gene_sets, classes, separate_by) {
         g.selectAll(".rect").filter(rect => updated_xy[rect[attr+'_id']]).attr(xy, (rect) => updated_xy[rect[attr+'_id']]);
 
         angle = 60;
-        if (xy === 'x') { g.selectAll(svg_class).filter(node => node.height === 0).attr('transform', function(leaf) { return 'rotate('+angle+','+leaf.x0+','+(genes.x1+10)+')' }); }
+        if (xy === 'x') { g.selectAll(svg_class).filter(node => node.height === 0).attr('transform', function(leaf) { return 'rotate('+angle+','+leaf.x0+','+(genes.x1+10)+')' }); }  // change genes.x1 to BBox height
 
 
     }
@@ -576,11 +576,9 @@ function Heatmap(samples_by_genes_matrix, gene_sets, classes, separate_by) {
 
         set_leaves = hierarchy.leaves().filter(gene => gene.parent.data.id === d.parent.data.id);
 
-        current_position_of_dragging_leaf = d3.event[xy]; // some trig function on d3.event[xy], d.x0, angle
-
         new_order = _.object(set_leaves.filter(leaf => leaf.data.id !== d.data.id)
                                        .map(leaf => [leaf.x0, leaf.data.id])
-                                       .concat([[current_position_of_dragging_leaf, d.data.id]])
+                                       .concat([[d.x0, d.data.id]])
                                        .sort((a, b) => a[0] - b[0])
                                        .map(([y, id], i) => [id, i]));
 
@@ -591,36 +589,32 @@ function Heatmap(samples_by_genes_matrix, gene_sets, classes, separate_by) {
         ordered_this_ids = hierarchy.leaves().map(leaf => leaf.data.id);   //// THIS IS A BUG -- IT ONLY CHANGES THE LOCAL COPY!!!
         new_index = ordered_this_ids.indexOf(d.data.id);
 
-        this_wise.splice(new_index, 0, this_wise.splice(old_index, 1)[0]);
-        other_wise.forEach((other) => other.splice(new_index, 0, other.splice(old_index, 1)[0]));
+        this_wise.move(old_index, new_index);
+        other_wise.forEach((other) => other.move(old_index, new_index));
 
         render();
 
     }
 
 
-    function drag_node_start(hierarchy, xy, attr) { return function(d) {}; }
+    function drag_node_start(d, hierarchy, xy, attr) { }
 
-    function drag_node(hierarchy, xy, attr) {
-
-        return function(d) {
+    function drag_node(d, hierarchy, xy, attr) {
 
 
 
 
 
-        }
+
     }
 
-    function drag_node_end(hierarchy, xy, attr) {
-
-        return function(d) {
+    function drag_node_end(d, hierarchy, xy, attr) {
 
 
 
 
 
-        }
+
     }
 
     // Drag category
