@@ -39,7 +39,6 @@ function Heatmap(samples_by_genes_matrix, gene_sets, classes, separate_by) {
     var samples_to_small_bin = _(classes).mapObject(categories_to_values => Object.entries(categories_to_values).sort().reduce((acc, [category, value]) => (acc ? acc+'-'+value : value), ''));
     var small_bin_to_samples = _(Object.keys(samples_to_small_bin)).groupBy(sample => samples_to_small_bin[sample]);
 
-
     /////////////////////////////////////////////////////////////////////////////
                     ///////    Structure Variables    ///////
     /////////////////////////////////////////////////////////////////////////////
@@ -76,9 +75,9 @@ function Heatmap(samples_by_genes_matrix, gene_sets, classes, separate_by) {
     var show_legends = false;
 
 
-    var colors20 = ["#3366cc", "#dc3912", "#ff9900", "#109618", "#990099", "#0099c6", "#dd4477",
-                    "#66aa00", "#b82e2e", "#316395", "#994499", "#22aa99", "#aaaa11", "#6633cc",
-                    "#e67300", "#8b0707", "#651067", "#329262", "#5574a6", "#3b3eac"];
+    var colors20 = ['#3366cc', '#dc3912', '#ff9900', '#109618', '#990099', '#0099c6', '#dd4477',
+                    '#66aa00', '#b82e2e', '#316395', '#994499', '#22aa99', '#aaaa11', '#6633cc',
+                    '#e67300', '#8b0707', '#651067', '#329262', '#5574a6', '#3b3eac'];
 
     var category_colors = _.object(categories.map((category) => [category, d3.scaleOrdinal(d3.schemeCategory10)]))
 
@@ -92,9 +91,9 @@ function Heatmap(samples_by_genes_matrix, gene_sets, classes, separate_by) {
                           ///////    Set Up Chart    ///////
     /////////////////////////////////////////////////////////////////////////////
 
-    var svg = d3.select("#graph-container").append("svg").attr("xmlns", "http://www.w3.org/2000/svg").attr("xmlns:xlink", "http://www.w3.org/1999/xlink");
-    var g = svg.append("g");
-    svg.style("cursor", "move");
+    var svg = d3.select('#graph-container').append('svg').attr('xmlns', 'http://www.w3.org/2000/svg').attr('xmlns:xlink', 'http://www.w3.org/1999/xlink');
+    var g = svg.append('g');
+    svg.style('cursor', 'move');
 
     var selected_gene_sets = {}
     var genes = [];
@@ -108,7 +107,7 @@ function Heatmap(samples_by_genes_matrix, gene_sets, classes, separate_by) {
     var x, y, category_y;
 
 
-    var legend_color = g.append("g").attr("class", "legend legendColor");
+    var legend_color = g.append('g').attr('class', 'legend legendColor');
 
 
     /////////////////////////////////////////////////////////////////////////////
@@ -136,7 +135,7 @@ function Heatmap(samples_by_genes_matrix, gene_sets, classes, separate_by) {
 
         sample_wise = Object.entries(matrix).map(([sample, genes]) =>
             Object.entries(genes).map(([gene, count]) => { return {
-                'id'        : sample+"_"+gene,
+                'id'        : sample+'_'+gene,
                 'sample'    : sample,
                 'sample_id' : null,  // assigned later
                 'gene'      : gene,
@@ -197,10 +196,10 @@ function Heatmap(samples_by_genes_matrix, gene_sets, classes, separate_by) {
                 prefix += '-'+safeStr(value);
                 existing_index_for_value = _(pointer).findIndex({'id':prefix});
                 if (existing_index_for_value > -1) {
-                    if (i+1 === categories.length) { pointer[existing_index_for_value].children.push({'id':prefix+"-"+sample_id, 'name':sample_id}); }
+                    if (i+1 === categories.length) { pointer[existing_index_for_value].children.push({'id':prefix+'-'+sample_id, 'name':sample_id}); }
                     else { pointer = pointer[existing_index_for_value].children; }
                 } else {
-                    if (i+1 === categories.length) { pointer.push({'id':prefix,'name':value,'category':category,'children':[{'id':prefix+"-"+sample_id, 'name':sample_id}]}); }
+                    if (i+1 === categories.length) { pointer.push({'id':prefix,'name':value,'category':category,'children':[{'id':prefix+'-'+sample_id, 'name':sample_id}]}); }
                     else {
                         pointer.push({'id':prefix,'name':value,'category':category,'children':[]});
                         pointer = pointer[_(pointer).findIndex({'id':prefix})].children;
@@ -315,20 +314,20 @@ function Heatmap(samples_by_genes_matrix, gene_sets, classes, separate_by) {
         y = _.object(genes.leaves().map(leaf => [leaf.data.id, leaf.x0]))
         category_y = _.object(categories.map((category, i) => [category, -((categories.length-i) * rect_height)-10]));
 
-        rect = g.selectAll(".rect").data(flatten(ordered_gene_wise), d => d.id);
-        gene = g.selectAll(".gene").data(genes.descendants(), d => d.data.id);
-        meta = g.selectAll(".meta").data(metadata.descendants(), d => d.data.id);
-        catg = g.selectAll(".catg").data(categories, d => d);
+        rect = g.selectAll('.rect').data(flatten(ordered_gene_wise), d => d.id);
+        gene = g.selectAll('.gene').data(genes.descendants(), d => d.data.id);
+        meta = g.selectAll('.meta').data(metadata.descendants(), d => d.data.id);
+        catg = g.selectAll('.catg').data(categories, d => d);
 
         // phase 1
             // rectangles which are exiting fade out
             // gene names which are exiting fade out
             // gene groups which are exiting fade out
         t_last = d3.transition().duration(200);
-        if (rect.exit().size() > 0) {
-            rect.exit().transition(t_last).style("opacity", 0).remove();
-            gene.exit().transition(t_last).style("opacity", 0).remove();
-            meta.exit().transition(t_last).style("opacity", 0).remove();
+        if (rect.exit().size() > 0 || gene.exit().size() > 0 || meta.exit().size() > 0) {
+            rect.exit().transition(t_last).style('opacity', 0).remove();
+            gene.exit().transition(t_last).style('opacity', 0).remove();
+            meta.exit().transition(t_last).style('opacity', 0).remove();
             t_last = t_last.transition().duration(500);
         }
 
@@ -347,6 +346,7 @@ function Heatmap(samples_by_genes_matrix, gene_sets, classes, separate_by) {
                                                                  .attr('transform', d => 'rotate(60,'+d.x0+','+(genes.x1+10)+')');
         meta.filter(node => node.depth > 0 && node.height > 0).transition(t_last).attr('transform', d => 'translate('+d.x0+','+category_y[d.data.category]+')');
         meta.filter(node => node.depth > 0 && node.height > 0).selectAll('.category_box').transition(t_last).attr('width', d => d.x1 - d.x0);
+        catg.transition(t_last).attr('x', metadata.x1+10).attr('y', d => category_y[d]);
         t_last = t_last.transition().duration(500);
 
 
@@ -507,8 +507,8 @@ function Heatmap(samples_by_genes_matrix, gene_sets, classes, separate_by) {
             pc1:            d3.scaleLinear().domain([d3.min(all_values, d => d.pc1),           0, d3.max(all_values, d => d.pc1)]          ).range([negative_color, middle_color, positive_color]),
         }
 
-        g.selectAll(".rect")
-            .style("fill", (d) => colors[values](d[values]));
+        g.selectAll('.rect')
+            .style('fill', (d) => colors[values](d[values]));
 
 
 
@@ -562,7 +562,7 @@ function Heatmap(samples_by_genes_matrix, gene_sets, classes, separate_by) {
         );
 
         g.selectAll(svg_class).filter(node => node.height === 0 && node.data.id in updated_xy).each(node => {node.x = updated_xy[node.data.id]}).attr(xy, node => node.x);
-        g.selectAll(".rect").filter(rect => updated_xy[rect[attr+'_id']]).attr(xy, (rect) => updated_xy[rect[attr+'_id']]);
+        g.selectAll('.rect').filter(rect => updated_xy[rect[attr+'_id']]).attr(xy, (rect) => updated_xy[rect[attr+'_id']]);
 
         angle = 60;
         if (xy === 'x') {
@@ -611,13 +611,36 @@ function Heatmap(samples_by_genes_matrix, gene_sets, classes, separate_by) {
 
     function drag_catg(d) {
 
-        d3.event[xy]
+        bounds = d3.extent(Object.values(category_y));
+        current_position_of_dragging_category = clamp(bounds[0], bounds[1])(d3.event.y);
+        depth = _.object(categories.map((catg, i) => [catg, i]));
+
+        let expr = (category) => {
+
+            if (depth[category] > depth[d] && current_position_of_dragging_category > category_y[category] - rect_height/2) { return category_y[category] - rect_height; }
+
+            if (depth[category] < depth[d] && current_position_of_dragging_category < category_y[category] + rect_height/2) { return category_y[category] + rect_height; }
+
+            if (category !== d) { return category_y[category]; }
+
+            if (category === d) { return current_position_of_dragging_category; }
+
+        }
+
+        updated_category_y = _.object(categories, categories.map(expr));
+
+        g.selectAll('.meta').filter(node => node.data.category in updated_category_y).each(node => {node.y = updated_category_y[node.data.category]}).attr('transform', node => 'translate('+node.x0+','+node.y+')');
+        g.selectAll('.catg').attr('y', d => updated_category_y[d]);
 
     }
 
     function drag_catg_end(d) {
 
-
+        category_y = {};
+        g.selectAll('.catg').each(function(d) { category_y[d] = d3.select(this).attr('y'); });
+        categories = Object.entries(category_y).sort((a, b) => a[1] - b[1]).map(([category, pos]) => category);
+        order();
+        render();
 
     }
 
@@ -633,25 +656,25 @@ function Heatmap(samples_by_genes_matrix, gene_sets, classes, separate_by) {
     function removeFocus(d) {
     }
 
-    function GeneCards(d) { window.open("http://www.genecards.org/cgi-bin/carddisp.pl?gene="+d,'_blank') }
+    function GeneCards(d) { window.open('http://www.genecards.org/cgi-bin/carddisp.pl?gene='+d,'_blank') }
 
 
     /////////////////////////////////////////////////////////////////////////////
                           ///////   Zoom & Resize    ///////
     /////////////////////////////////////////////////////////////////////////////
 
-    svg.call(d3.zoom().on("zoom", zoomed)).on("wheel.zoom", wheeled);
+    svg.call(d3.zoom().on('zoom', zoomed)).on('wheel.zoom', wheeled);
 
     transform = d3.zoomTransform(g);
     transform.x += margin.left;
     transform.y += margin.top;
-    g.attr("transform", transform);
+    g.attr('transform', transform);
 
     function zoomed() {
         current_transform = d3.zoomTransform(g);
         current_transform.x += d3.event.sourceEvent.movementX;
         current_transform.y += d3.event.sourceEvent.movementY;
-        g.attr("transform", current_transform);
+        g.attr('transform', current_transform);
     }
 
     function wheeled() {
@@ -661,16 +684,16 @@ function Heatmap(samples_by_genes_matrix, gene_sets, classes, separate_by) {
         } else {
             current_transform.y = clamp(-(ordered_gene_ids.length*rect_height-100), h)(current_transform.y - d3.event.deltaY);
         }
-        g.attr("transform", current_transform);
+        g.attr('transform', current_transform);
     }
 
     function resize() {
-        svg.attr("width", $("#graph-container").innerWidth()).attr("height", $("#graph-container").innerHeight());
-        w = $("#graph-container").innerWidth() - (margin.left + margin.right);
-        h = $("#graph-container").innerHeight() - (margin.top + margin.bottom);
+        svg.attr('width', $('#graph-container').innerWidth()).attr('height', $('#graph-container').innerHeight());
+        w = $('#graph-container').innerWidth() - (margin.left + margin.right);
+        h = $('#graph-container').innerHeight() - (margin.top + margin.bottom);
     }
 
-    d3.select(window).on("resize", resize)
+    d3.select(window).on('resize', resize)
 
     resize();
 
