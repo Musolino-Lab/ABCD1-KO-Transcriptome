@@ -83,19 +83,32 @@
                             Along <input type="color" value="#0000cc" id="negative_color"> <input type="color" value="#c0c0c0" id="middle_color"> <input type="color" value="#cc0000" id="positive_color">
 
                             <br>
+                            <br>
                             <div id="sampleLabels">
                                 <label>Sample Labels</label>
                                 <div class="form-check form-check-inline"><input class="form-check-input" type="radio" name="sampleLabels" id="before" value="before"> before</div>
                                 <div class="form-check form-check-inline"><input class="form-check-input" type="radio" name="sampleLabels" id="after" value="after" checked> after</div>
                             </div>
 
-                            <br>
+                            <div id="sampleMeta">
+                                <label>Sample Metadata</label>
+                                <div class="form-check form-check-inline"><input class="form-check-input" type="radio" name="sampleMeta" id="before" value="before" checked> before</div>
+                                <div class="form-check form-check-inline"><input class="form-check-input" type="radio" name="sampleMeta" id="after" value="after"> after</div>
+                            </div>
+
                             <div id="geneLabels">
                                 <label>Gene Labels</label>
                                 <div class="form-check form-check-inline"><input class="form-check-input" type="radio" name="geneLabels" id="before" value="before" checked> before</div>
                                 <div class="form-check form-check-inline"><input class="form-check-input" type="radio" name="geneLabels" id="after" value="after"> after</div>
                             </div>
 
+                            <div id="geneMeta">
+                                <label>Gene Metadata</label>
+                                <div class="form-check form-check-inline"><input class="form-check-input" type="radio" name="geneMeta" id="before" value="before" checked> before</div>
+                                <div class="form-check form-check-inline"><input class="form-check-input" type="radio" name="geneMeta" id="after" value="after"> after</div>
+                            </div>
+
+                            <br>
                             <div>
                                 <b><label for="cell_width">Cell Width</label></b>
                                 <input type="range" id="cell_width" name="" min="1" max="60" step="0.1" value="16">
@@ -217,15 +230,21 @@ chooseGenes.on('input', manual_gene_list_edit_debounced);
                  ///////    Style Figure    ///////
 /////////////////////////////////////////////////////////////////////////////
 
-$("#reordering").change(                        function () { heatmap.set_reordering(this.checked) });
-$("#minimum_nonzero").change(                   function () { heatmap.order({'minimum_nonzero_': parseInt(this.value)}); heatmap.render(); refresh_genes(); });
-$("#values input:radio").change(                function () { heatmap.order({'values_': this.value}); heatmap.render(); refresh_genes(); });
-$("#sorting input:radio").change(               function () { heatmap.order({'sorting_': this.value}); heatmap.render(); refresh_genes(); });
+$("#reordering").change(               function () { heatmap.set_reordering(this.checked) });
+$("#minimum_nonzero").change(          function () { heatmap.order({'minimum_nonzero_': parseInt(this.value)}); heatmap.render(); refresh_genes(); });
+$("#values input:radio").change(       function () { heatmap.order({'values_': this.value}); heatmap.render(); refresh_genes(); });
+$("#sorting input:radio").change(      function () { heatmap.order({'sorting_': this.value}); heatmap.render(); refresh_genes(); });
 
-$("#show_legends").change(                      function () { heatmap.style({'show_legends_': this.checked}) });
-$("#negative_color").change(                    function () { heatmap.style({'negative_color_': this.value}) });
-$("#middle_color").change(                      function () { heatmap.style({'middle_color_': this.value}) });
-$("#positive_color").change(                    function () { heatmap.style({'positive_color_': this.value}) });
+
+$("#sampleLabels input:radio").change( function () { heatmap.render({'x_axis_leaves_position_': this.value}); });
+$("#sampleMeta input:radio").change(   function () { heatmap.render({'x_axis_nodes_position_': this.value}); });
+$("#geneLabels input:radio").change(   function () { heatmap.render({'y_axis_leaves_position_': this.value}); });
+$("#geneMeta input:radio").change(     function () { heatmap.render({'y_axis_nodes_position_': this.value}); });
+
+$("#show_legends").change(             function () { heatmap.style({'show_legends_': this.checked}) });
+$("#negative_color").change(           function () { heatmap.style({'negative_color_': this.value}) });
+$("#middle_color").change(             function () { heatmap.style({'middle_color_': this.value}) });
+$("#positive_color").change(           function () { heatmap.style({'positive_color_': this.value}) });
 
 
 /////////////////////////////////////////////////////////////////////////////
