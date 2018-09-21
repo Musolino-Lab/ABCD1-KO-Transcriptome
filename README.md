@@ -1,23 +1,11 @@
 # ABCD1 Knockout Transcriptome
 
 
-<!--
-drag
-- drag gene sets
-- drag meta inside parent meta
-
-
-
-legends
-
 
 transpose
 
 
 resize boxes
-
-
-hover
 
 
 gene / gene set selection UI
@@ -32,4 +20,13 @@ PC1
 remove genes / gene sets / samples / sample sets
 
 
- -->
+legends
+
+
+hover
+
+
+canvas
+
+
+drag catg better
