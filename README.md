@@ -1,8 +1,6 @@
 # ABCD1 Knockout Transcriptome
 
 
-drag catg
-
 
 hierarchies before / after
 
@@ -32,3 +30,6 @@ hover
 
 
 canvas
+
+
+drag catg better

@@ -231,8 +231,10 @@ function Heatmap(samples_by_genes_matrix, gene_sets, classes, separate_by) {
 
         if (reordering && ordered_gene_wise.length > 1) {
 
+            counter = 0;
             genes.each(node => {
-                if (node.depth === 1 && node.name !== null) {  // for each gene set
+                if (node.height === 1 && node.data.name !== null) {  // for each gene set
+                    node.data.order = counter; counter += 1;
 
                     set_gene_ids = node.children.map(gene => gene.data.id);
                     set_genes = ordered_gene_wise.filter(bygene => set_gene_ids.includes(bygene[0].gene_id));
@@ -244,7 +246,6 @@ function Heatmap(samples_by_genes_matrix, gene_sets, classes, separate_by) {
                     set_gene_ids = reorder.stablepermute(set_gene_ids, permutation_order);
                     permutation_order = _.object(set_gene_ids.map((id, i) => [id, i]));
                     node.children.forEach((gene) => gene.data.order = permutation_order[gene.data.id]);
-
                 }
             });
 
@@ -428,13 +429,13 @@ function Heatmap(samples_by_genes_matrix, gene_sets, classes, separate_by) {
             .attr('class', 'gene')
             .attr('id', d => d.data.id)
             .attr('x', -10)
-            .attr('y', d => d.x0)
+            .attr('y', d => y[d.data.id])
             .text(d => d.data.name)
             .attr('font-family', 'sans-serif')
             .style('font-weight', 300)
             .style('cursor', 'pointer')
             .style('text-anchor', 'end')
-            .attr('dy', '0.8em')
+            .attr('dy', rect_height)
             .on('click', (d) => GeneCards(d.data.name))
             .call(d3.drag().on('drag', drag_gene).on('end', drag_gene_end))
             .style('opacity', 0).transition(t_last).style('opacity', 1);
@@ -529,8 +530,10 @@ function Heatmap(samples_by_genes_matrix, gene_sets, classes, separate_by) {
 
     function drag_node(d, hierarchy, xy, attr, svg_class) {
 
+        let initial_position = (node) => (xy === 'x' ? node.x0 : (node.height === 0 ? node.x0 : node.x1));
+
         index_of_dragging_node = d.data.order;
-        current_position_of_dragging_node = (d.x ? d.x : d.x0) + (xy === 'x' ? d3.event.dx : d3.event.dy);
+        current_position_of_dragging_node = (d.x ? d.x : initial_position(d)) + (xy === 'x' ? d3.event.dx : d3.event.dy);
         dragging_node_width = d.x1 - d.x0;
 
         set_nodes = hierarchy.descendants().filter(node => node.parent && node.parent.data.id === d.parent.data.id);
@@ -538,27 +541,31 @@ function Heatmap(samples_by_genes_matrix, gene_sets, classes, separate_by) {
         let expr = (node) => {
 
             index_of_other_node = node.data.order;
-            original_position_of_other_node = node.x0;
+            original_position_of_other_node = initial_position(node);
             other_node_width = node.x1 - node.x0;
 
-            if (index_of_other_node < index_of_dragging_node && current_position_of_dragging_node < original_position_of_other_node + dragging_node_width/2) {
+            if (index_of_other_node < index_of_dragging_node && current_position_of_dragging_node - (xy === 'y' ? dragging_node_width : other_node_width) < original_position_of_other_node) {
                 return original_position_of_other_node + dragging_node_width + (margins[xy][d.height] || 0) + 2;
             }
 
-            if (index_of_other_node > index_of_dragging_node && current_position_of_dragging_node > original_position_of_other_node - dragging_node_width/2) {
+            if (index_of_other_node > index_of_dragging_node && current_position_of_dragging_node > original_position_of_other_node - (xy === 'y' ? other_node_width : dragging_node_width)) {
                 return original_position_of_other_node - dragging_node_width - (margins[xy][d.height] || 0) - 2;
             }
 
             if (index_of_other_node !== index_of_dragging_node) { return original_position_of_other_node; }
 
-            if (index_of_other_node === index_of_dragging_node) { return clamp(node.parent.x0, node.parent.x1-other_node_width)(current_position_of_dragging_node) }
+
+            if (index_of_other_node === index_of_dragging_node) {
+                if (xy === 'y' && node.height > 0) { return clamp(node.parent.x0+other_node_width, node.parent.x1)(current_position_of_dragging_node); }
+                else { return clamp(node.parent.x0, node.parent.x1-other_node_width)(current_position_of_dragging_node); }
+            }
         };
 
         updated_xy = _.object(
             flatten(
                 set_nodes.map(node => {
-                    delta = expr(node) - node.x0;
-                    return node.descendants().map(des => [des.data.id, des.x0+delta]);
+                    delta = expr(node) - initial_position(node);
+                    return node.descendants().map(des => [des.data.id, initial_position(des)+delta]);
                 })
             )
         );
@@ -573,14 +580,10 @@ function Heatmap(samples_by_genes_matrix, gene_sets, classes, separate_by) {
 
         if (d.height > 0) {
             g.selectAll(svg_class).filter(node => node.height > 0 && node.data.id in updated_xy).each(node => {node.x = updated_xy[node.data.id]}).attr('transform', function(node) {
-                if (xy === 'x') {
-                    return 'translate('+node.x+','+category_y[node.data.category]+')';
-                } else {
-                    return 'translate(-100,'+(node.x + node.x1 - node.x0)+')rotate(-90)';
-                }
+                if (xy === 'x') { return 'translate('+node.x+','+category_y[node.data.category]+')'; }
+                if (xy === 'y') { return 'translate(-100,'+node.x+')rotate(-90)'; }
             });
         }
-
 
     }
 
