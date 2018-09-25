@@ -130,7 +130,6 @@ function Heatmap(samples_by_genes_matrix, gene_sets, classes, separate_by) {
     function restart({selected_gene_sets_=selected_gene_sets}={}) {
 
         selected_gene_sets = selected_gene_sets_;
-        console.log(selected_gene_sets);
         // TODO deal with duplicate gene sets E.g. [Peroxisome, Peroxisome]
         keys = Object.keys(Object.values(samples_by_genes_matrix)[0]);  // genes included in matrix
         genes = d3.hierarchy({
