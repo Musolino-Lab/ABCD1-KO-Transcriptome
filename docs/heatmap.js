@@ -143,17 +143,17 @@ function Heatmap(samples_by_genes_matrix, gene_sets, classes, separate_by) {
     var x, y, x_category_y;
     var x_tree, y_tree, x_attr, y_attr;
 
-    var drag_y        = (d) => drag_node(     d, y_tree, 'y', y_attr, '.ytre');
+    var drag_y        = (d) => drag_node(     d, y_tree, 'y', y_attr);
     var drag_y_end    = (d) => drag_node_end( d, y_tree, 'y', ordered_sample_ids, sample_wise, ordered_gene_wise);
 
-    var drag_x        = (d) => drag_node(     d, x_tree, 'x', x_attr, '.xtre');
+    var drag_x        = (d) => drag_node(     d, x_tree, 'x', x_attr);
     var drag_x_end    = (d) => drag_node_end( d, x_tree, 'x', ordered_gene_ids, ordered_gene_wise, sample_wise);
 
-    var drag_ycat     = (d) => drag_catg(     d, 'y', y_categories, y_categories_x);
-    var drag_ycat_end = (d) => drag_catg_end( d);
+    var drag_ycat     = (d) => drag_catg(     d, 'y', y_categories, y_category_x, y_axis_nodes_x_width);
+    var drag_ycat_end = (d) => drag_catg_end( d, 'y');
 
-    var drag_xcat     = (d) => drag_catg(     d, 'x', x_categories, x_categories_y);
-    var drag_xcat_end = (d) => drag_catg_end( d);
+    var drag_xcat     = (d) => drag_catg(     d, 'x', x_categories, x_category_y, x_axis_nodes_y_height);
+    var drag_xcat_end = (d) => drag_catg_end( d, 'x');
 
 
     var legend_color = g.append('g').attr('class', 'legend legendColor');
@@ -428,9 +428,9 @@ function Heatmap(samples_by_genes_matrix, gene_sets, classes, separate_by) {
         x_font_size = Math.min(rect_width-spacing, max_font_size);
 
         y_axis_leaves_x = position[y_axis_style]['leaves'](y_axis_nodes_position, y_axis_leaves_position, y_tree, x_tree, y_axis_nodes_x_width, text_max_width(y_tree, y_font_size));
-        y_axis_nodes_x  = position[y_axis_style]['nodes'](y_axis_nodes_position, y_axis_leaves_position, y_tree, x_tree, y_axis_nodes_x_width, text_max_width(y_tree, y_font_size));
+        y_axis_nodes_x  = position[y_axis_style]['nodes']( y_axis_nodes_position, y_axis_leaves_position, y_tree, x_tree, y_axis_nodes_x_width, text_max_width(y_tree, y_font_size));
         x_axis_leaves_y = position[x_axis_style]['leaves'](x_axis_nodes_position, x_axis_leaves_position, x_tree, y_tree, x_axis_nodes_y_height, text_max_width(x_tree, x_font_size));
-        x_axis_nodes_y  = position[x_axis_style]['nodes'](x_axis_nodes_position, x_axis_leaves_position, x_tree, y_tree, x_axis_nodes_y_height, text_max_width(x_tree, x_font_size));
+        x_axis_nodes_y  = position[x_axis_style]['nodes']( x_axis_nodes_position, x_axis_leaves_position, x_tree, y_tree, x_axis_nodes_y_height, text_max_width(x_tree, x_font_size));
 
         x_axis_leaves_rotation = (x_axis_leaves_position === 'before') ? -60 : 60;
 
@@ -466,7 +466,8 @@ function Heatmap(samples_by_genes_matrix, gene_sets, classes, separate_by) {
                                                                  .style('text-anchor', (y_axis_leaves_position === 'before' ? 'end' : 'start'))
         ytre.filter(node => node.depth > 0 && node.height > 0).transition(t_last).attr('transform', d => 'translate('+(y_axis_nodes_x + d.y0)+','+d.x1+')rotate(-90)')
         ytre.filter(node => node.depth > 0 && node.height > 0).selectAll('.ytre_box').transition(t_last).style('stroke-dasharray', d => (y_axis_nodes_position === 'before' ? pointing_right(d) : pointing_left(d)));
-        ycat.transition(t_last).attr('y', y_tree.x1+10).attr('x', d => y_category_x[d]);
+        ycat.transition(t_last).attr('y', y_tree.x1+10).attr('x', d => y_category_x[d])
+                               .attr('transform', d => 'rotate('+x_axis_leaves_rotation+','+y_category_x[d]+','+(y_tree.x1+10)+')');
         t_last = t_last.transition().duration(500);
 
         // phase 3
@@ -607,8 +608,8 @@ function Heatmap(samples_by_genes_matrix, gene_sets, classes, separate_by) {
             .text(d => d)
             .attr('x', d => y_category_x[d])
             .attr('y', y_tree.x1+10)
-            // .attr('transform', d => 'rotate('+x_axis_leaves_rotation+','+y_category_x[d]+','+y_tree.x1+10+')')
-            .attr('dy', '0.8em')
+            .attr('transform', d => 'rotate('+x_axis_leaves_rotation+','+y_category_x[d]+','+(y_tree.x1+10)+')')
+            .attr('dx', '0.2em')
             .attr('font-family', 'sans-serif')
             .style('font-size', Math.min(x_axis_nodes_y_height-spacing, max_font_size))
             .style('font-weight', 300)
@@ -685,7 +686,7 @@ function Heatmap(samples_by_genes_matrix, gene_sets, classes, separate_by) {
                           ///////      Drag      ///////
     ///////////////////////////////////////////////////////////////////////////
 
-    function drag_node(d, hierarchy, xy, attr, svg_class) {
+    function drag_node(d, hierarchy, xy, attr) {
 
         let initial_position = (node) => (xy === 'x' ? node.x0 : (node.height === 0 ? node.x0 : node.x1));
 
@@ -727,15 +728,15 @@ function Heatmap(samples_by_genes_matrix, gene_sets, classes, separate_by) {
             )
         );
 
-        g.selectAll(svg_class).filter(node => node.height === 0 && node.data.id in updated_xy).each(node => {node.x = updated_xy[node.data.id]}).attr(xy, node => node.x);
+        g.selectAll('.'+xy+'tre').filter(node => node.height === 0 && node.data.id in updated_xy).each(node => {node.x = updated_xy[node.data.id]}).attr(xy, node => node.x);
         g.selectAll('.rect').filter(rect => updated_xy[rect[attr]]).attr(xy, (rect) => updated_xy[rect[attr]]);
 
         if (xy === 'x') {
-            g.selectAll(svg_class).filter(node => node.height === 0 && node.data.id in updated_xy).attr('transform', node => 'rotate('+x_axis_leaves_rotation+','+node.x+','+x_axis_leaves_y+')');
+            g.selectAll('.'+xy+'tre').filter(node => node.height === 0 && node.data.id in updated_xy).attr('transform', node => 'rotate('+x_axis_leaves_rotation+','+node.x+','+x_axis_leaves_y+')');
         }
 
         if (d.height > 0) {
-            g.selectAll(svg_class).filter(node => node.height > 0 && node.data.id in updated_xy).each(node => {node.x = updated_xy[node.data.id]}).attr('transform', function(node) {
+            g.selectAll('.'+xy+'tre').filter(node => node.height > 0 && node.data.id in updated_xy).each(node => {node.x = updated_xy[node.data.id]}).attr('transform', function(node) {
                 if (xy === 'x') { return 'translate('+node.x+','+(x_axis_nodes_y + node.y0)+')'; }
                 if (xy === 'y') { return 'translate('+(y_axis_nodes_x+node.y0)+','+node.x+')rotate(-90)'; }
             });
@@ -770,37 +771,50 @@ function Heatmap(samples_by_genes_matrix, gene_sets, classes, separate_by) {
 
     // Drag category
 
-    function drag_catg(d, xy, xy_categories, xy_categories_yx) {
+    function drag_catg(d, xy, xy_categories, xy_categories_y, layer_width) {
 
         yx = (xy === 'x' ? 'y' : 'x');
-        bounds = d3.extent(Object.values(x_category_y));
+        bounds = d3.extent(Object.values(xy_categories_y));
         current_position_of_dragging_category = clamp(bounds[0], bounds[1])(d3.event[yx]);
-        depth = _.object(x_categories.map((catg, i) => [catg, i]));
+        depth = _.object(xy_categories.map((catg, i) => [catg, i]));
 
         let expr = (category) => {
 
-            if (depth[category] > depth[d] && current_position_of_dragging_category > x_category_y[category] - x_axis_nodes_y_height/2) { return x_category_y[category] - x_axis_nodes_y_height; }
+            if (depth[category] > depth[d] && current_position_of_dragging_category > xy_categories_y[category] - layer_width/2) { return xy_categories_y[category] - layer_width; }
 
-            if (depth[category] < depth[d] && current_position_of_dragging_category < x_category_y[category] + x_axis_nodes_y_height/2) { return x_category_y[category] + x_axis_nodes_y_height; }
+            if (depth[category] < depth[d] && current_position_of_dragging_category < xy_categories_y[category] + layer_width/2) { return xy_categories_y[category] + layer_width; }
 
-            if (category !== d) { return x_category_y[category]; }
+            if (category !== d) { return xy_categories_y[category]; }
 
             if (category === d) { return current_position_of_dragging_category; }
 
         }
 
-        updated_x_category_y = _.object(x_categories, x_categories.map(expr));
+        updated_xy_categories_y = _.object(xy_categories, xy_categories.map(expr));
 
-        g.selectAll('.'+xy+'cat').filter(node => node.data.category in updated_x_category_y).each(node => {node.y = updated_x_category_y[node.data.category]}).attr('transform', node => 'translate('+node.x0+','+node.y+')');
-        g.selectAll('.'+xy+'cat').attr('y', d => updated_x_category_y[d]);
+        // .attr('transform', d => 'translate('+(y_axis_nodes_x + d.y0)+','+d.x1+')rotate(-90)')
+        // .attr('transform', d => 'translate('+d.x0+','+(x_axis_nodes_y + d.y0)+')');
+
+        g.selectAll('.'+xy+'cat').attr(yx, d => updated_xy_categories_y[d]);
+
+        if (xy === 'y') {
+            g.selectAll('.ycat').attr('transform', d => 'rotate('+x_axis_leaves_rotation+','+updated_xy_categories_y[d]+','+(y_tree.x1+10)+')')
+        }
+
+        g.selectAll('.'+xy+'tre').filter(node => node.data.category in updated_xy_categories_y).each(node => {node.y = updated_xy_categories_y[node.data.category]}).attr('transform', function(node) {
+            if (xy === 'x') { return 'translate('+node.x0+','+node.y+')'; }
+            if (xy === 'y') { return 'translate('+node.y+','+node.x1+')rotate(-90)'; }
+        });
+
 
     }
 
-    function drag_catg_end(d) {
+    function drag_catg_end(d, xy) {
 
-        x_category_y = {};
-        g.selectAll('.xcat').each(function(d) { x_category_y[d] = d3.select(this).attr('y'); });
-        categories = Object.entries(x_category_y).sort((a, b) => a[1] - b[1]).map(([category, pos]) => category);
+        yx = (xy === 'x' ? 'y' : 'x');
+        xy_categories_y = {};
+        g.selectAll('.'+xy+'cat').each(function(d) { xy_categories_y[d] = d3.select(this).attr('y'); });
+        categories = Object.entries(xy_categories_y).sort((a, b) => a[1] - b[1]).map(([category, pos]) => category);
         order();
         render();
 
