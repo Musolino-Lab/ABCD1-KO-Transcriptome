@@ -122,15 +122,7 @@
                             </div>
 
                             <br>
-                            <div>
-                                <b><label for="cell_width">Cell Width</label></b>
-                                <input type="range" id="cell_width" name="" min="1" max="60" step="0.1" value="16">
-                            </div>
-
-                            <div>
-                                <b><label for="cell_height">Cell Height</label></b>
-                                <input type="range" id="cell_height" name="" min="1" max="60" step="0.1" value="16">
-                            </div>
+                            <button type="button" class="btn btn-outline-secondary btn-sm" id="transpose">Transpose</button>
 
                         </div>
 
@@ -256,6 +248,7 @@ $("#x_style input:radio").change(  function () { heatmap.render({'x_axis_style_'
 $("#y_labels input:radio").change( function () { heatmap.render({'y_axis_leaves_position_': this.value}); });
 $("#y_meta input:radio").change(   function () { heatmap.render({'y_axis_nodes_position_': this.value}); });
 $("#y_style input:radio").change(  function () { heatmap.render({'y_axis_style_': this.value}); });
+$("#transpose").click(             function () { heatmap.transpose(); });
 
 $("#show_legends").change(         function () { heatmap.style({'show_legends_': this.checked}) });
 $("#negative_color").change(       function () { heatmap.style({'negative_color_': this.value}) });
