@@ -2,9 +2,6 @@
 
 
 
-transpose
-
-
 gene / gene set selection UI
 
 
@@ -30,3 +27,6 @@ hover
 
 
 drag catg better
+
+
+genecards links
