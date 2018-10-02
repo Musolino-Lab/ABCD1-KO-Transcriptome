@@ -180,7 +180,6 @@ function Heatmap(samples_by_genes_matrix, gene_sets, classes, separate_by) {
                     }})
                 });
 
-
         matrix = _(samples_by_genes_matrix).mapObject((sample) => _(sample).pick(genes.leaves().map(d => d.data.name)));
 
         sample_wise = Object.entries(matrix).map(([sample, genes]) =>
@@ -792,9 +791,6 @@ function Heatmap(samples_by_genes_matrix, gene_sets, classes, separate_by) {
 
         updated_xy_categories_y = _.object(xy_categories, xy_categories.map(expr));
 
-        // .attr('transform', d => 'translate('+(y_axis_nodes_x + d.y0)+','+d.x1+')rotate(-90)')
-        // .attr('transform', d => 'translate('+d.x0+','+(x_axis_nodes_y + d.y0)+')');
-
         g.selectAll('.'+xy+'cat').attr(yx, d => updated_xy_categories_y[d]);
 
         if (xy === 'y') {
@@ -806,14 +802,13 @@ function Heatmap(samples_by_genes_matrix, gene_sets, classes, separate_by) {
             if (xy === 'y') { return 'translate('+node.y+','+node.x1+')rotate(-90)'; }
         });
 
-
     }
 
     function drag_catg_end(d, xy) {
 
         yx = (xy === 'x' ? 'y' : 'x');
         xy_categories_y = {};
-        g.selectAll('.'+xy+'cat').each(function(d) { xy_categories_y[d] = d3.select(this).attr('y'); });
+        g.selectAll('.'+xy+'cat').each(function(d) { xy_categories_y[d] = d3.select(this).attr(yx); });
         categories = Object.entries(xy_categories_y).sort((a, b) => a[1] - b[1]).map(([category, pos]) => category);
         order();
         render();
