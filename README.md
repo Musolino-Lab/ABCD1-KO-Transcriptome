@@ -5,10 +5,13 @@
 transpose
 
 
-resize boxes
-
-
 gene / gene set selection UI
+
+
+canvas / webgl
+
+
+resize boxes
 
 
 colors
@@ -24,9 +27,6 @@ legends
 
 
 hover
-
-
-canvas
 
 
 drag catg better
