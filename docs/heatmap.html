@@ -170,8 +170,6 @@ separate_by = ['system'];
 heatmap = Heatmap(mouse_human_lee_merged_counts, human_gene_sets, mouse_human_lee_merged_classes, separate_by);
 
 
-let equal = (a1, a2) => a1.length === a2.length && a1.every((value, i) => value === a2[i]);
-
 
 /////////////////////////////////////////////////////////////////////////////
              ///////    Select Gene Set / Genes   ///////
@@ -191,7 +189,7 @@ var chooseGeneSetform = new Awesomplete(chooseGeneSet, {
 });
 
 chooseGenes = $('#chooseGenes');
-function refresh_genes() { chooseGenes.text(heatmap.get_sorted_gene_list().join(", ")); }
+function refresh_genes() { chooseGenes.text(heatmap.get_sorted_gene_list().map(gene => gene.name).join(", ")); }
 
 selected_gene_sets = [];
 
@@ -204,7 +202,6 @@ chooseGeneSet.addEventListener('awesomplete-selectcomplete', function(e) {
     refresh_genes();
 });
 
-
 function gene_set_list_change(e) {
     keys = this.value.split(',').map(s => s.trim()).filter(s => s);
     filtered_selected_gene_sets = selected_gene_sets.filter(gs => gs.gene_set_name === null || keys.includes(gs.gene_set_name));
@@ -213,22 +210,67 @@ function gene_set_list_change(e) {
         heatmap.restart({'selected_gene_sets_':selected_gene_sets});
     }
 }
-gene_set_list_change_debounced = _.debounce(gene_set_list_change, 500)
-$('#chooseGeneSet').change(gene_set_list_change_debounced);
+$('#chooseGeneSet').on('input', _.debounce(gene_set_list_change, 80));
+
+Array.prototype.not_in = function(other) { return this.filter(function(item) {return other.indexOf(item) < 0;}); };
+
+
+
+let distance_to_x_from_i_in_a = (a, x, i) => _(a).indexOf(x, i) - i;
+
+function uniques(a1, i1, a2, i2) {
+
+    if (i1 === a1.length || i2 === a2.length) {
+
+        return [[_.object(_.range(i1, a1.length), a1.slice(i1, a1.length)),
+                 _.object(_.range(i2, a2.length), a2.slice(i2, a2.length))]]; }
+
+    else if (a1[i1] === a2[i2]) { return uniques(a1, i1+1, a2, i2+1); }
+
+    else {
+        distance_in_a1_to_a2_head = distance_to_x_from_i_in_a(a1, a2[i2], i1);
+        distance_in_a2_to_a1_head = distance_to_x_from_i_in_a(a2, a1[i1], i2);
+
+        a1_head_exists_in_a2 = distance_in_a2_to_a1_head > 0;
+        a2_head_exists_in_a1 = distance_in_a1_to_a2_head > 0;
+
+        if (!a1_head_exists_in_a2 && !a2_head_exists_in_a1) { return [[{[''+i1]:a1[i1]}, {[''+i2]:a2[i2]}]].concat(uniques(a1, i1+1, a2, i2+1)); }
+
+        else if (a1_head_exists_in_a2 && !a2_head_exists_in_a1) { return [[{}, _.object(_.range(i2, i2+distance_in_a2_to_a1_head), a2.slice(i2, i2+distance_in_a2_to_a1_head))]].concat(uniques(a1, i1, a2, i2+distance_in_a2_to_a1_head)); }
+
+        else if (!a1_head_exists_in_a2 && a2_head_exists_in_a1) { return [[_.object(_.range(i1, i1+distance_in_a1_to_a2_head), a1.slice(i1, i1+distance_in_a1_to_a2_head)), {}]].concat(uniques(a1, i1+distance_in_a1_to_a2_head, a2, i2)); }
+
+        else if (distance_in_a2_to_a1_head < distance_in_a1_to_a2_head) { return [[{}, _.object(_.range(i2, i2+distance_in_a2_to_a1_head), a2.slice(i2, i2+distance_in_a2_to_a1_head))]].concat(uniques(a1, i1, a2, i2+distance_in_a2_to_a1_head)); }
+
+        else if (distance_in_a1_to_a2_head < distance_in_a2_to_a1_head) { return [[_.object(_.range(i1, i1+distance_in_a1_to_a2_head), a1.slice(i1, i1+distance_in_a1_to_a2_head)), {}]].concat(uniques(a1, i1+distance_in_a1_to_a2_head, a2, i2)); }
+
+        else { console.log('wtf'); }
+
+    }
+}
+
+let uniqs = (a, b) => uniques(a, 0, b, 0).reduce((acc, [from_a1, from_a2]) => [Object.assign(acc[0], from_a1), Object.assign(acc[1], from_a2)], [{}, {}]);
 
 
 function manual_gene_list_edit(e) {
     new_list = $(this).text().split(/[\s,;\t\n]+/).filter(n => n);
-    if (!equal(new_list, heatmap.get_sorted_gene_list())) {
+    old_list = heatmap.get_sorted_gene_list().map(gene => gene.name);
+    [removed, added] = uniqs(old_list, new_list);
 
-        // add a bunch of {'gene_set_name':null, 'genes':[gene]} here
+    if (Object.keys(removed).length > 0 || Object.keys(added).length > 0) {
+
+        removed_indices = Object.keys(removed).map(s => parseInt(s));
+        console.log(heatmap.get_sorted_gene_list().filter((gene, i) => removed_indices.includes(i)).map(gene => gene.id));
+
+        added.forEach(item => selected_gene_sets.append({'gene_set_name':null, 'genes':[item]}));
 
         heatmap.restart({'selected_gene_sets_':selected_gene_sets});
-        refresh_genes();
+
     }
+
 }
-manual_gene_list_edit_debounced = _.debounce(manual_gene_list_edit, 1000)
-chooseGenes.on('input', manual_gene_list_edit_debounced);
+chooseGenes.on('input', _.debounce(manual_gene_list_edit, 50));
+chooseGenes.on('blur', refresh_genes);
 
 // d3.on("drag", refresh_genes());
 

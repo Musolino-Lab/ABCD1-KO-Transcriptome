@@ -1,6 +1,6 @@
 
 
-let range = n => [...Array(n).keys()];
+let range = n => [...Array(n).keys()];  // underscore has a range()
 let clamp = (min, max) => ((x) => Math.min(Math.max(x, min), max));
 let transpose = (array) => array[0].map((col, i) => array.map(row => row[i]));
 let flatten = (array) => [].concat.apply([], array);
@@ -811,7 +811,8 @@ function Heatmap(samples_by_genes_matrix, gene_sets, classes, separate_by) {
         yx = (xy === 'x' ? 'y' : 'x');
         xy_categories_y = {};
         g.selectAll('.'+xy+'cat').each(function(d) { xy_categories_y[d] = d3.select(this).attr(yx); });
-        categories = Object.entries(xy_categories_y).sort((a, b) => a[1] - b[1]).map(([category, pos]) => category);
+        updated_categories = Object.entries(xy_categories_y).sort((a, b) => a[1] - b[1]).map(([category, pos]) => category);
+        if (_.isEqual(_.sortBy(categories), _.sortBy(updated_categories))) { categories = updated_categories; }
         order();
         render();
 
@@ -883,7 +884,7 @@ function Heatmap(samples_by_genes_matrix, gene_sets, classes, separate_by) {
 
         transpose     : function() { t = !t; render(); },
 
-        get_sorted_gene_list: () => _(sample_wise[0]).pluck('gene'),
+        get_sorted_gene_list: () => genes.leaves().map(d => _(d.data).pick('id', 'name')),
 
         set_reordering: (reordering_) => { reordering = reordering_; if (reordering) { order(); render(); } },
     }
