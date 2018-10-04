@@ -2,12 +2,6 @@
 
 
 
-transpose
-
-
-gene / gene set selection UI
-
-
 canvas / webgl
 
 
@@ -30,3 +24,9 @@ hover
 
 
 drag catg better
+
+
+genecards links
+
+
+
