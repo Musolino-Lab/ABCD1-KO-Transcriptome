@@ -189,7 +189,7 @@ var chooseGeneSetform = new Awesomplete(chooseGeneSet, {
 });
 
 chooseGenes = $('#chooseGenes');
-function refresh_genes() { chooseGenes.text(heatmap.get_sorted_gene_list().map(gene => gene.name).join(", ")); }
+function refresh_genes() { chooseGenes.text(heatmap.get_sorted_genes().leaves().map(gene => gene.data.name).join(", ")); }
 
 selected_gene_sets = [];
 
@@ -210,20 +210,19 @@ function gene_set_list_change(e) {
         heatmap.restart({'selected_gene_sets_':selected_gene_sets});
     }
 }
-$('#chooseGeneSet').on('input', _.debounce(gene_set_list_change, 80));
-
-Array.prototype.not_in = function(other) { return this.filter(function(item) {return other.indexOf(item) < 0;}); };
-
+$('#chooseGeneSet').on('input', _.debounce(gene_set_list_change, 100));
 
 
 let distance_to_x_from_i_in_a = (a, x, i) => _(a).indexOf(x, i) - i;
+
+Array.prototype.slice_from_to = function(from, to) { return _.object(_.range(from, to), this.slice(from, to)); };
 
 function uniques(a1, i1, a2, i2) {
 
     if (i1 === a1.length || i2 === a2.length) {
 
-        return [[_.object(_.range(i1, a1.length), a1.slice(i1, a1.length)),
-                 _.object(_.range(i2, a2.length), a2.slice(i2, a2.length))]]; }
+        return [[a1.slice_from_to(i1, a1.length),
+                 a2.slice_from_to(i2, a2.length)]]; }
 
     else if (a1[i1] === a2[i2]) { return uniques(a1, i1+1, a2, i2+1); }
 
@@ -236,13 +235,15 @@ function uniques(a1, i1, a2, i2) {
 
         if (!a1_head_exists_in_a2 && !a2_head_exists_in_a1) { return [[{[''+i1]:a1[i1]}, {[''+i2]:a2[i2]}]].concat(uniques(a1, i1+1, a2, i2+1)); }
 
-        else if (a1_head_exists_in_a2 && !a2_head_exists_in_a1) { return [[{}, _.object(_.range(i2, i2+distance_in_a2_to_a1_head), a2.slice(i2, i2+distance_in_a2_to_a1_head))]].concat(uniques(a1, i1, a2, i2+distance_in_a2_to_a1_head)); }
+        else if (a1_head_exists_in_a2 && !a2_head_exists_in_a1) { return [[{}, a2.slice_from_to(i2, i2+distance_in_a2_to_a1_head)]].concat(uniques(a1, i1, a2, i2+distance_in_a2_to_a1_head)); }
 
-        else if (!a1_head_exists_in_a2 && a2_head_exists_in_a1) { return [[_.object(_.range(i1, i1+distance_in_a1_to_a2_head), a1.slice(i1, i1+distance_in_a1_to_a2_head)), {}]].concat(uniques(a1, i1+distance_in_a1_to_a2_head, a2, i2)); }
+        else if (!a1_head_exists_in_a2 && a2_head_exists_in_a1) { return [[a1.slice_from_to(i1, i1+distance_in_a1_to_a2_head), {}]].concat(uniques(a1, i1+distance_in_a1_to_a2_head, a2, i2)); }
 
-        else if (distance_in_a2_to_a1_head < distance_in_a1_to_a2_head) { return [[{}, _.object(_.range(i2, i2+distance_in_a2_to_a1_head), a2.slice(i2, i2+distance_in_a2_to_a1_head))]].concat(uniques(a1, i1, a2, i2+distance_in_a2_to_a1_head)); }
+        else if (distance_in_a2_to_a1_head < distance_in_a1_to_a2_head) { return [[{}, a2.slice_from_to(i2, i2+distance_in_a2_to_a1_head)]].concat(uniques(a1, i1, a2, i2+distance_in_a2_to_a1_head)); }
 
-        else if (distance_in_a1_to_a2_head < distance_in_a2_to_a1_head) { return [[_.object(_.range(i1, i1+distance_in_a1_to_a2_head), a1.slice(i1, i1+distance_in_a1_to_a2_head)), {}]].concat(uniques(a1, i1+distance_in_a1_to_a2_head, a2, i2)); }
+        else if (distance_in_a1_to_a2_head < distance_in_a2_to_a1_head) { return [[a1.slice_from_to(i1, i1+distance_in_a1_to_a2_head), {}]].concat(uniques(a1, i1+distance_in_a1_to_a2_head, a2, i2)); }
+
+        else if (distance_in_a1_to_a2_head === distance_in_a2_to_a1_head) { return [[{}, a2.slice_from_to(i2, i2+distance_in_a2_to_a1_head)]].concat(uniques(a1, i1, a2, i2+distance_in_a2_to_a1_head)); }
 
         else { console.log('wtf'); }
 
@@ -253,23 +254,43 @@ let uniqs = (a, b) => uniques(a, 0, b, 0).reduce((acc, [from_a1, from_a2]) => [O
 
 
 function manual_gene_list_edit(e) {
+
+    let flatten = (array) => [].concat.apply([], array);
+
+    selected_gene_sets = heatmap.get_sorted_genes().children.map(gs => {
+        if (gs.height === 0) { return {'gene_set_name':null, 'genes':[gs.data.name]}}
+        else { return {'gene_set_name': gs.data.name, 'genes': gs.children.map(gene => gene.data.name)} }
+    });
+    rendered_genes_names_sets_and_ids = heatmap.get_sorted_genes().leaves().map(gene => _(gene.data).pick('id', 'name', 'gene_set'));
+    old_list = rendered_genes_names_sets_and_ids.map(gene => gene.name);
     new_list = $(this).text().split(/[\s,;\t\n]+/).filter(n => n);
-    old_list = heatmap.get_sorted_gene_list().map(gene => gene.name);
+
     [removed, added] = uniqs(old_list, new_list);
 
     if (Object.keys(removed).length > 0 || Object.keys(added).length > 0) {
 
         removed_indices = Object.keys(removed).map(s => parseInt(s));
-        console.log(heatmap.get_sorted_gene_list().filter((gene, i) => removed_indices.includes(i)).map(gene => gene.id));
+        removed_genes = rendered_genes_names_sets_and_ids.filter((gene, i) => removed_indices.includes(i));
+        implicated_gene_sets = _.uniq(removed_genes.map(gene => gene.gene_set));
+        removed_single_genes = Object.entries(_(removed_genes).groupBy(gene => gene.gene_set)).filter(([key, val]) => key === null || val.length === 1).map(([key, val]) => val[0]);
 
-        added.forEach(item => selected_gene_sets.append({'gene_set_name':null, 'genes':[item]}));
+        selected_gene_sets = flatten(_(selected_gene_sets).reject(gs => gs.genes.length === 1 && removed_single_genes.includes(gs.genes[0])).map(gs => {
+            if (implicated_gene_sets.includes(gs.gene_set_name)) {
+                genes_to_remove_in_this_gene_set = removed_genes.filter(gene => gene.gene_set === gs.gene_set_name).map(gene => gene.name);
+                return _(gs.genes).reject(gene => genes_to_remove_in_this_gene_set.includes(gene)).map(gene => {return {'gene_set_name':null, 'genes':[gene]}})
+            } else {
+                return gs;
+            }
+        }));
+
+        Object.values(added).forEach(item => selected_gene_sets.push({'gene_set_name':null, 'genes':[item]}));
 
         heatmap.restart({'selected_gene_sets_':selected_gene_sets});
 
     }
 
 }
-chooseGenes.on('input', _.debounce(manual_gene_list_edit, 50));
+chooseGenes.on('input', _.debounce(manual_gene_list_edit, 100));
 chooseGenes.on('blur', refresh_genes);
 
 // d3.on("drag", refresh_genes());

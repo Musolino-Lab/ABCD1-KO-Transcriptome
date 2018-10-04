@@ -170,18 +170,24 @@ function Heatmap(samples_by_genes_matrix, gene_sets, classes, separate_by) {
     function restart({selected_gene_sets_=selected_gene_sets}={}) {
 
         selected_gene_sets = selected_gene_sets_;
-        selected_gene_sets = _.uniq(selected_gene_sets, false, gs => gs.gene_set_name);
+        selected_gene_sets = _.uniq(selected_gene_sets, false, (gs,i) => gs.gene_set_name ? gs.gene_set_name : i);  // gross, but how else do you keep all the nulls?
         keys = Object.keys(Object.values(samples_by_genes_matrix)[0]);  // genes included in matrix
+
         genes = d3.hierarchy({
                     'id': 'genes',
-                    'children': selected_gene_sets.map((gs, i) => { return {
-                        'id': safeStr(gs.gene_set_name),
-                        'name': gs.gene_set_name,
-                        'category': 'Gene Set',
-                        'children': _.uniq(gs.genes).filter(gene => keys.includes(gene)).map(gene => {
-                             return {'gene_set':gs.gene_set_name, 'name':gene, 'id':(safeStr(gs.gene_set_name) || 'other')+'_'+gene}
+                    'children': selected_gene_sets.filter(gs => gs.gene_set_name !== null || keys.includes(gs.genes[0])).map((gs, i) => {
+                        if (gs.gene_set_name === null) {
+                            return {'gene_set':null, 'name':gs.genes[0], 'id':'other'+'_'+gs.genes[0]}
+                        } else {
+                            return {
+                                'id': safeStr(gs.gene_set_name),
+                                'name': gs.gene_set_name,
+                                'category': 'Gene Set',
+                                'children': _.uniq(gs.genes).filter(gene => keys.includes(gene)).map(gene => {
+                                     return {'gene_set':gs.gene_set_name, 'name':gene, 'id':(safeStr(gs.gene_set_name) || 'other')+'_'+gene}
+                                })
+                            }}
                         })
-                    }})
                 });
 
         matrix = _(samples_by_genes_matrix).mapObject((sample) => _(sample).pick(genes.leaves().map(d => d.data.name)));
@@ -366,7 +372,7 @@ function Heatmap(samples_by_genes_matrix, gene_sets, classes, separate_by) {
 
         if (t) {
 
-            x_categories = ['Gene Set'];
+            x_categories = (genes.height > 1 ? ['Gene Set'] : []);
             y_categories = categories;
 
             x_tree = genes;
@@ -380,7 +386,7 @@ function Heatmap(samples_by_genes_matrix, gene_sets, classes, separate_by) {
         } else {
 
             x_categories = categories;
-            y_categories = ['Gene Set'];
+            y_categories = (genes.height > 1 ? ['Gene Set'] : []);
 
             x_tree = metadata;
             y_tree = genes;
@@ -884,7 +890,7 @@ function Heatmap(samples_by_genes_matrix, gene_sets, classes, separate_by) {
 
         transpose     : function() { t = !t; render(); },
 
-        get_sorted_gene_list: () => genes.leaves().map(d => _(d.data).pick('id', 'name')),
+        get_sorted_genes: () => genes,
 
         set_reordering: (reordering_) => { reordering = reordering_; if (reordering) { order(); render(); } },
     }
