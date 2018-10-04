@@ -2,9 +2,6 @@
 
 
 
-gene / gene set selection UI
-
-
 canvas / webgl
 
 
