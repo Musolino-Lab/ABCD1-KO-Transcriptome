@@ -113,6 +113,7 @@ function Heatmap(samples_by_genes_matrix, gene_sets, classes, separate_by) {
     var y_axis_leaves_x, y_axis_nodes_x, x_axis_nodes_y, x_axis_leaves_y;
     var x_axis_leaves_rotation = (x_axis_leaves_position === 'before') ? -60 : 60;
     var y_font_size, x_font_size, x_cat_font_size, y_cat_font_size;
+    var show_x_level_names = true, show_y_level_names = true;
 
     let text_max_width = (tree, font_size) => d3.max(tree.leaves().map(leaf => leaf.data.name.length)) * font_size;
 
@@ -395,8 +396,6 @@ function Heatmap(samples_by_genes_matrix, gene_sets, classes, separate_by) {
 
         t = t_ ? true : false;
 
-        // [y_axis_style, x_axis_style] = [x_axis_style, y_axis_style];
-
         if (t) {
 
             x_categories = (genes.height > 1 ? ['Gene Set'] : []);
@@ -674,12 +673,16 @@ function Heatmap(samples_by_genes_matrix, gene_sets, classes, separate_by) {
     function style({negative_color_=negative_color,
                     middle_color_=middle_color,
                     positive_color_=positive_color,
-                    show_legends_=show_legends}={}) {
+                    show_legends_=show_legends,
+                    show_x_level_names_=show_x_level_names,
+                    show_y_level_names_=show_y_level_names,}={}) {
 
         negative_color = negative_color_,
         middle_color = middle_color_,
         positive_color = positive_color_,
         show_legends = show_legends_;
+        show_x_level_names = show_x_level_names_;
+        show_y_level_names = show_y_level_names_;
 
         all_values = flatten(gene_wise);
 
@@ -693,6 +696,8 @@ function Heatmap(samples_by_genes_matrix, gene_sets, classes, separate_by) {
             .style('fill', (d) => colors[values](d[values]));
 
 
+        g.selectAll('.xcat').attr('visibility', show_x_level_names ? 'visible' : 'hidden');
+        g.selectAll('.ycat').attr('visibility', show_y_level_names ? 'visible' : 'hidden');
 
         if (show_legends) {
 
@@ -979,7 +984,7 @@ function Heatmap(samples_by_genes_matrix, gene_sets, classes, separate_by) {
         'order'       : order,
         'style'       : style,
 
-        transpose     : function() { t = !t; [rect_width, rect_height] = [rect_height, rect_width]; render(); },
+        transpose     : function() { t = !t; [rect_width, rect_height] = [rect_height, rect_width]; [y_axis_style, x_axis_style] = [x_axis_style, y_axis_style]; render(); },
 
         get_sorted_genes: () => genes,
 
