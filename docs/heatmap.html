@@ -199,6 +199,7 @@ chooseGeneSet.addEventListener('awesomplete-selectcomplete', function(e) {
     selected_gene_set = {'gene_set_name':selected_gene_set_name, 'genes':selected_genes};
     selected_gene_sets.push(selected_gene_set);
     heatmap.restart({'selected_gene_sets_':selected_gene_sets});
+    // window.location.hash = selected_gene_sets.map(gs => gs.gene_set_name).join(',')
     refresh_genes();
 });
 
