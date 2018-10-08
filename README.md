@@ -5,9 +5,6 @@
 canvas / webgl
 
 
-resize boxes
-
-
 colors
 
 

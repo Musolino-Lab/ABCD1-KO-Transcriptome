@@ -401,9 +401,9 @@ function Heatmap(samples_by_genes_matrix, gene_sets, classes, separate_by) {
             y_categories = categories;
 
             x_tree = genes;
+            x_attr = 'gene_id';
             y_tree = metadata;
             y_attr = 'sample_id';
-            x_attr = 'gene_id';
 
             drag_y_end = (d) => drag_node_end( d, y_tree, 'y', sample_wise, ordered_gene_wise);
             drag_x_end = (d) => drag_node_end( d, x_tree, 'x', ordered_gene_wise, sample_wise);
@@ -414,9 +414,9 @@ function Heatmap(samples_by_genes_matrix, gene_sets, classes, separate_by) {
             y_categories = (genes.height > 1 ? ['Gene Set'] : []);
 
             x_tree = metadata;
+            x_attr = 'sample_id';
             y_tree = genes;
             y_attr = 'gene_id';
-            x_attr = 'sample_id';
 
             drag_y_end = (d) => drag_node_end( d, y_tree, 'y', ordered_gene_wise, sample_wise);
             drag_x_end = (d) => drag_node_end( d, x_tree, 'x', sample_wise, ordered_gene_wise);
@@ -426,17 +426,17 @@ function Heatmap(samples_by_genes_matrix, gene_sets, classes, separate_by) {
 
     function position() {
 
-        metadata_across = (rect_width*metadata.leaves().length)+spacing;
-        metadata_topdown = x_axis_nodes_y_height*(metadata.height+1);
-        d3.partition().size([metadata_across, metadata_topdown]).padding(spacing)(metadata);
-        offset(metadata, margins['sample_id']);
-
-        genes_across = (rect_height*genes.leaves().length)+spacing;
-        genes_topdown = y_axis_nodes_x_width*(genes.height+1);
-        d3.partition().size([genes_across, genes_topdown]).padding(spacing)(genes);
-        offset(genes, margins['gene_id']);
-
         set_transposition(t);
+
+        x_tree_across = (rect_width*x_tree.leaves().length)+spacing;
+        x_tree_topdown = x_axis_nodes_y_height*(x_tree.height+1);
+        d3.partition().size([x_tree_across, x_tree_topdown]).padding(spacing)(x_tree);
+        offset(x_tree, margins[x_attr]);
+
+        y_tree_across = (rect_height*y_tree.leaves().length)+spacing;
+        y_tree_topdown = y_axis_nodes_x_width*(y_tree.height+1);
+        d3.partition().size([y_tree_across, y_tree_topdown]).padding(spacing)(y_tree);
+        offset(y_tree, margins[y_attr]);
 
         x = _.object(x_tree.leaves().map(leaf => [leaf.data.id, leaf.x0]));
         y = _.object(y_tree.leaves().map(leaf => [leaf.data.id, leaf.x0]));
