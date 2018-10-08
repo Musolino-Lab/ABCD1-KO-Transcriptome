@@ -39,31 +39,6 @@ function Heatmap(samples_by_genes_matrix, gene_sets, classes, separate_by) {
     var samples_to_small_bin = _(classes).mapObject(categories_to_values => Object.entries(categories_to_values).sort().reduce((acc, [category, value]) => (acc ? acc+'-'+value : value), ''));
     var small_bin_to_samples = _(Object.keys(samples_to_small_bin)).groupBy(sample => samples_to_small_bin[sample]);
 
-        // METADATA  // to order the levels: change the order of categories
-
-    var hierarchy = {'id':'metadata', 'children':[]};
-    Object.entries(classes).forEach(([sample_id, metadata]) => {
-        pointer = hierarchy.children;
-        prefix = 'metadata';
-        categories.forEach((category, i) => {
-            value = metadata[category];
-            prefix += '-'+safeStr(value);
-            existing_index_for_value = _(pointer).findIndex({'id':prefix});
-            if (existing_index_for_value > -1) {
-                if (i+1 === categories.length) { pointer[existing_index_for_value].children.push({'id':prefix+'-'+sample_id, 'name':sample_id}); }
-                else { pointer = pointer[existing_index_for_value].children; }
-            } else {
-                if (i+1 === categories.length) { pointer.push({'id':prefix,'name':value,'category':category,'children':[{'id':prefix+'-'+sample_id, 'name':sample_id}]}); }
-                else {
-                    pointer.push({'id':prefix,'name':value,'category':category,'children':[]});
-                    pointer = pointer[_(pointer).findIndex({'id':prefix})].children;
-                }
-            }
-        })
-    });
-    var metadata = d3.hierarchy(hierarchy);
-
-
     /////////////////////////////////////////////////////////////////////////////
                     ///////    Structure Variables    ///////
     /////////////////////////////////////////////////////////////////////////////
@@ -166,6 +141,7 @@ function Heatmap(samples_by_genes_matrix, gene_sets, classes, separate_by) {
 
     var selected_gene_sets = {}
     var genes = [];
+    var metadata = {};
     var gene_wise = [];
     var gene_wise_indexer = {};
     var ordered_gene_wise = [];
@@ -293,6 +269,31 @@ function Heatmap(samples_by_genes_matrix, gene_sets, classes, separate_by) {
         sorting = sorting_;
         minimum_nonzero = minimum_nonzero_;
         value_accessor = value_accessors[values];
+
+        // METADATA  // to order the levels: change the order of categories
+
+        hierarchy = {'id':'metadata', 'children':[]};
+        Object.entries(classes).forEach(([sample_id, metadata]) => {
+            pointer = hierarchy.children;
+            prefix = 'metadata';
+            categories.forEach((category, i) => {
+                value = metadata[category];
+                prefix += '-'+safeStr(value);
+                existing_index_for_value = _(pointer).findIndex({'id':prefix});
+                if (existing_index_for_value > -1) {
+                    if (i+1 === categories.length) { pointer[existing_index_for_value].children.push({'id':prefix+'-'+sample_id, 'name':sample_id}); }
+                    else { pointer = pointer[existing_index_for_value].children; }
+                } else {
+                    if (i+1 === categories.length) { pointer.push({'id':prefix,'name':value,'category':category,'children':[{'id':prefix+'-'+sample_id, 'name':sample_id}]}); }
+                    else {
+                        pointer.push({'id':prefix,'name':value,'category':category,'children':[]});
+                        pointer = pointer[_(pointer).findIndex({'id':prefix})].children;
+                    }
+                }
+            })
+        });
+
+        metadata = d3.hierarchy(hierarchy);
 
         sample_to_sample_id = _.object(metadata.leaves().map(leaf => [leaf.data.name, leaf.data.id]));
         sample_wise.forEach(by_sample => by_sample.forEach(sample => sample.sample_id = sample_to_sample_id[sample.sample]));
