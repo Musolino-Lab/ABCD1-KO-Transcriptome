@@ -20,9 +20,6 @@ hover
 drag catg better
 
 
-genecards links
-
-
 frontend router
 
 

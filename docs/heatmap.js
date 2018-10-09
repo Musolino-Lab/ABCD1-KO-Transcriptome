@@ -81,7 +81,7 @@ function Heatmap(samples_by_genes_matrix, gene_sets, classes, separate_by) {
             'gene_id': {
                 'fill-opacity': 0,
                 'stroke': 'black',
-                'stroke-dasharray': d => (x_axis_nodes_position === 'before' ? pointing_right(d) : pointing_left(d))}
+                'stroke-dasharray': d => pointing_right(d)}
         },
         'leaves': { 'sample_id': {}, 'gene_id': {}, }
     };
@@ -534,6 +534,7 @@ function Heatmap(samples_by_genes_matrix, gene_sets, classes, separate_by) {
             .text(d => d.data.name)
             .styles(text_styles)
             .style('font-size', x_font_size)
+            .on('click', (d) => (x_attr === 'gene_id' ? GeneCards(d.data.name) : null))
             .call(d3.drag().on('drag', drag_x).on('end', drag_x_end))
             .style('opacity', 0).transition(t_last).style('opacity', 1);
 
@@ -595,7 +596,7 @@ function Heatmap(samples_by_genes_matrix, gene_sets, classes, separate_by) {
             .styles(text_styles)
             .style('text-anchor', (y_axis_leaves_position === 'before' ? 'end' : 'start'))
             .attr('dy', y_font_size)
-            .on('click', (d) => GeneCards(d.data.name))
+            .on('click', (d) => (y_attr === 'gene_id' ? GeneCards(d.data.name) : null))
             .call(d3.drag().on('drag', drag_y).on('end', drag_y_end))
             .style('opacity', 0).transition(t_last).style('opacity', 1);
 
