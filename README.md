@@ -1,6 +1,13 @@
 # ABCD1 Knockout Transcriptome
 
 
+
+values
+
+
+UI for offset
+
+
 canvas / webgl
 
 
@@ -17,7 +24,4 @@ drag catg better
 
 
 frontend router
-
-
-change angle of x axis leaves
 

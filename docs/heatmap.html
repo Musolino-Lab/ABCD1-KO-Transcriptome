@@ -103,7 +103,14 @@
                                 <div class="form-check form-check-inline"><input class="form-check-input" type="radio" name="x_style" id="genes" value="genes"> Meta > Label</div>
                                 <div class="form-check form-check-inline"><input class="form-check-input" type="radio" name="x_style" id="metadata" value="metadata" checked> Label > Meta</div>
                             </div>
-                            <div><input type="checkbox" id="show_x_level_names" value="show_x_level_names" checked><label> Show X-Axis level names </label></div>
+                            <div>
+                                <input type="checkbox" id="show_x_level_names" value="show_x_level_names" checked><label> Show X-Axis level names </label>
+                            </div>
+                            <div>
+                                <label style="display: inline" for="rotation">X-Axis Label rotation  60</label>
+                                <input type="range" id="rotation" name="rotation" min="60" max="90" step="1" value="60" style="position: relative; top: 3px; display: inline">
+                                <label style="display: inline">90</label>
+                            </div>
 
 
                             <br>
@@ -319,6 +326,7 @@ $("#x_labels input:radio").change( function () { heatmap.render({'x_axis_leaves_
 $("#x_meta input:radio").change(   function () { heatmap.render({'x_axis_nodes_position_': this.value}); });
 $("#x_style input:radio").change(  function () { heatmap.render({'x_axis_style_': this.value}); });
 $("#show_x_level_names").change(   function () { heatmap.style({'show_x_level_names_': this.checked}); });
+$("#rotation").change(             function () { heatmap.style({'rotation_': this.value}); });
 $("#y_labels input:radio").change( function () { heatmap.render({'y_axis_leaves_position_': this.value}); });
 $("#y_meta input:radio").change(   function () { heatmap.render({'y_axis_nodes_position_': this.value}); });
 $("#y_style input:radio").change(  function () { heatmap.render({'y_axis_style_': this.value}); });
