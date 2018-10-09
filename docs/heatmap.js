@@ -10,7 +10,7 @@ let pointing_right = (d) => ''+((d.x1 - d.x0) * 1 + (d.y1 - d.y0) * 1)+','+(d.x1
 let pointing_left = (d) => '0,'+((d.x1 - d.x0) * 1)+','+((d.x1 - d.x0) * 1 + (d.y1 - d.y0) * 2);
 Array.prototype.last = function() { return this[this.length - 1]; };
 Array.prototype.move = function(from, to) { this.splice(to, 0, this.splice(from, 1)[0]); };
-
+Array.prototype.insert = function(index, item) { this.splice( index, 0, item ); return this; };
 
 function Heatmap(samples_by_genes_matrix, gene_sets, classes, separate_by) {
 
@@ -54,13 +54,6 @@ function Heatmap(samples_by_genes_matrix, gene_sets, classes, separate_by) {
     var reordering = true;
     var minimum_nonzero = 0;
 
-    value_accessors = {
-        counts: (gene) => gene.counts,
-        zscore_stddev: (gene) => gene.samples.map((sample) => sample.zscore_stddev),
-        zscore_mad: (gene) => gene.samples.map((sample) => sample.zscore_mad),
-        pc1: (gene) => gene.samples.map((sample) => sample.pc1),
-    }
-    value_accessor = value_accessors.counts;
 
     /////////////////////////////////////////////////////////////////////////////
                     ///////    Styling Variables    ///////
@@ -74,11 +67,12 @@ function Heatmap(samples_by_genes_matrix, gene_sets, classes, separate_by) {
     var category_colors = _.object(categories.map((category) => [category, d3.scaleOrdinal(d3.schemeCategory10)]))
 
     var colors = {};
+    var color_style = 'interpolateTriplet'
 
     var spacing = 1;
     var rect_width = 16;
     var rect_height = 16;
-    var max_font_size = 16;
+
     var margins = {'sample_id': {'2': 10}, 'gene_id': {'1': 10}};
     var styles = {
         'nodes': {
@@ -91,13 +85,6 @@ function Heatmap(samples_by_genes_matrix, gene_sets, classes, separate_by) {
         },
         'leaves': { 'sample_id': {}, 'gene_id': {}, }
     };
-    var text_styles = {
-        'font-family': 'sans-serif',
-        'font-weight': 300,
-        'cursor': 'pointer',
-        'text-anchor': 'start',
-    };
-
 
     var y_axis_leaves_position = 'before';
     var y_axis_nodes_position = 'before';
@@ -115,8 +102,6 @@ function Heatmap(samples_by_genes_matrix, gene_sets, classes, separate_by) {
     var y_font_size, x_font_size, x_cat_font_size, y_cat_font_size;
     var show_x_level_names = true, show_y_level_names = true;
 
-    let text_max_width = (tree, font_size) => d3.max(tree.leaves().map(leaf => leaf.data.name.length)) * font_size;
-
     // position[display_style][nodes_or_leaves]: (params) => int;
     var axis_position = {
         'genes': {
@@ -132,6 +117,17 @@ function Heatmap(samples_by_genes_matrix, gene_sets, classes, separate_by) {
                 (nodes_position === 'before') ? -(layer_width*this_tree.height)-10 : other_tree.x1 - layer_width + 10,
         }
     };
+
+    var max_font_size = 16;
+    var text_styles = {
+        'font-family': 'sans-serif',
+        'font-weight': 300,
+        'cursor': 'pointer',
+        'text-anchor': 'start',
+    };
+
+    let text_max_width = (tree, font_size) => d3.max(tree.leaves().map(leaf => leaf.data.name.length)) * font_size;
+
 
     /////////////////////////////////////////////////////////////////////////////
                           ///////    Set Up Chart    ///////
@@ -270,7 +266,6 @@ function Heatmap(samples_by_genes_matrix, gene_sets, classes, separate_by) {
         values = values_;
         sorting = sorting_;
         minimum_nonzero = minimum_nonzero_;
-        value_accessor = value_accessors[values];
 
         // METADATA  // to order the levels: change the order of categories
 
@@ -670,13 +665,15 @@ function Heatmap(samples_by_genes_matrix, gene_sets, classes, separate_by) {
 
     }
 
-    function style({negative_color_=negative_color,
+    function style({color_style_=color_style,
+                    negative_color_=negative_color,
                     middle_color_=middle_color,
                     positive_color_=positive_color,
                     show_legends_=show_legends,
                     show_x_level_names_=show_x_level_names,
                     show_y_level_names_=show_y_level_names,}={}) {
 
+        color_style = color_style_;
         negative_color = negative_color_,
         middle_color = middle_color_,
         positive_color = positive_color_,
@@ -685,15 +682,15 @@ function Heatmap(samples_by_genes_matrix, gene_sets, classes, separate_by) {
         show_y_level_names = show_y_level_names_;
 
         all_values = flatten(gene_wise);
+        values_domain = d3.extent(all_values, d => d[values]).insert(1, 0);
 
-        colors = {
-            zscore_stddev:  d3.scaleLinear().domain([d3.min(all_values, d => d.zscore_stddev), 0, d3.max(all_values, d => d.zscore_stddev)]).range([negative_color, middle_color, positive_color]),
-            zscore_mad:     d3.scaleLinear().domain([d3.min(all_values, d => d.zscore_mad),    0, d3.max(all_values, d => d.zscore_mad)]   ).range([negative_color, middle_color, positive_color]),
-            pc1:            d3.scaleLinear().domain([d3.min(all_values, d => d.pc1),           0, d3.max(all_values, d => d.pc1)]          ).range([negative_color, middle_color, positive_color]),
-        }
+        if (color_style === 'interpolateTriplet') {
+            colors = d3.scaleLinear().domain(values_domain).range([negative_color, middle_color, positive_color]); }
+        else {
+            colors = d3.scaleSequential(d3[color_style]).domain(values_domain); }
 
         g.selectAll('.rect')
-            .style('fill', (d) => colors[values](d[values]));
+            .style('fill', (d) => colors(d[values]));
 
 
         g.selectAll('.xcat').attr('visibility', show_x_level_names ? 'visible' : 'hidden');

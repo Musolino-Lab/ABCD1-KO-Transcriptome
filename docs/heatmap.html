@@ -63,8 +63,8 @@
                             <br>
                             <div id="values">
                                 <label>Show Gene Values of</label>
-                                <div class="form-check"><input class="form-check-input" type="radio" name="values" value="counts" checked> Original Values</div>
-                                <div class="form-check"><input class="form-check-input" type="radio" name="values" value="zscore_stddev"> Z-Scores (Standard Deviations)</div>
+                                <div class="form-check"><input class="form-check-input" type="radio" name="values" value="counts">log₁₀ Original Counts</div>
+                                <div class="form-check"><input class="form-check-input" type="radio" name="values" value="zscore_stddev" checked> Z-Scores (Standard Deviations)</div>
                                 <div class="form-check"><input class="form-check-input" type="radio" name="values" value="zscore_mad"> Z-Scores (Mean Absolute Deviation)</div>
                             </div>
 
@@ -80,9 +80,13 @@
                             <div><input type="checkbox" id="show_legends" value="show_legends"><label> Show legends </label></div>
 
                             <br>
-                            Along <input type="color" value="#0000cc" id="negative_color"> <input type="color" value="#c0c0c0" id="middle_color"> <input type="color" value="#cc0000" id="positive_color">
+                            <div id="colors">
+                                <label>Cell Colors</label>
+                                <div class="form-check"><input class="form-check-input" type="radio" name="colors" id="Triplet" value="interpolateTriplet" checked> along <input type="color" value="#0000cc" id="negative_color"> <input type="color" value="#c0c0c0" id="middle_color"> <input type="color" value="#cc0000" id="positive_color"></div>
+                                <div class="form-check"><input class="form-check-input" type="radio" name="colors" id="Viridis" value="interpolateViridis"> Viridis</div>
+                                <div class="form-check"><input class="form-check-input" type="radio" name="colors" id="Magma" value="interpolateMagma"> Magma</div>
+                            </div>
 
-                            <br>
                             <br>
                             <div id="x_labels">
                                 <label>X-Axis Labels</label>
@@ -305,6 +309,11 @@ $("#minimum_nonzero").change(      function () { heatmap.order({'minimum_nonzero
 $("#values input:radio").change(   function () { heatmap.order({'values_': this.value}); heatmap.render(); refresh_genes(); });
 $("#sorting input:radio").change(  function () { heatmap.order({'sorting_': this.value}); heatmap.render(); refresh_genes(); });
 
+$("#show_legends").change(         function () { heatmap.style({'show_legends_': this.checked}) });
+$("#colors input:radio").change(   function () { heatmap.style({'color_style_': this.value}); });
+$("#negative_color").change(       function () { heatmap.style({'negative_color_': this.value}) });
+$("#middle_color").change(         function () { heatmap.style({'middle_color_': this.value}) });
+$("#positive_color").change(       function () { heatmap.style({'positive_color_': this.value}) });
 
 $("#x_labels input:radio").change( function () { heatmap.render({'x_axis_leaves_position_': this.value}); });
 $("#x_meta input:radio").change(   function () { heatmap.render({'x_axis_nodes_position_': this.value}); });
@@ -315,11 +324,6 @@ $("#y_meta input:radio").change(   function () { heatmap.render({'y_axis_nodes_p
 $("#y_style input:radio").change(  function () { heatmap.render({'y_axis_style_': this.value}); });
 $("#show_y_level_names").change(   function () { heatmap.style({'show_y_level_names_': this.checked}); });
 $("#transpose").click(             function () { heatmap.transpose(); });
-
-$("#show_legends").change(         function () { heatmap.style({'show_legends_': this.checked}) });
-$("#negative_color").change(       function () { heatmap.style({'negative_color_': this.value}) });
-$("#middle_color").change(         function () { heatmap.style({'middle_color_': this.value}) });
-$("#positive_color").change(       function () { heatmap.style({'positive_color_': this.value}) });
 
 
 /////////////////////////////////////////////////////////////////////////////

@@ -2,13 +2,10 @@
 
 
 
-canvas / webgl
-
-
-colors
-
-
 PC1
+
+
+canvas / webgl
 
 
 remove genes / gene sets / samples / sample sets
