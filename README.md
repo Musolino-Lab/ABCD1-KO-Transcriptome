@@ -1,10 +1,6 @@
 # ABCD1 Knockout Transcriptome
 
 
-
-PC1
-
-
 canvas / webgl
 
 

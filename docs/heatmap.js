@@ -307,10 +307,6 @@ function Heatmap(samples_by_genes_matrix, gene_sets, classes, separate_by) {
 
         if (ordered_gene_wise.length === 0) { return; }  // do something smart here.
 
-        // Set Gene-Wise PC1
-        // genes_pc1 = reorder.pca1d(reorder.transpose(ordered_gene_wise.map(value_accessor)));
-        // _(_.zip(ordered_gene_wise, genes_pc1)).each((gene, pc1) => gene.pc1 = pc1);
-
         if (reordering && ordered_gene_wise.length > 1) {
 
             counter = 0;
@@ -320,9 +316,13 @@ function Heatmap(samples_by_genes_matrix, gene_sets, classes, separate_by) {
 
                     set_gene_ids = node.children.map(gene => gene.data.id);
                     set_genes = ordered_gene_wise.filter(bygene => set_gene_ids.includes(bygene[0].gene_id));
-                    set_gene_values = set_genes.map(bygene => bygene.map(gene => gene[values]));
+                    set_gene_values = set_genes.map(bygene => bygene.map(gene => gene[values] || 0));
 
                     if (set_gene_values.length > 1) {
+
+                        // Set Gene-Wise PC1
+                        genes_pc1 = reorder.pca1d(reorder.transpose(set_gene_values));
+                        _.zip(set_genes, genes_pc1).forEach(([by_gene, pc1]) => by_gene.forEach(d => d.pc1 = pc1));
 
                         if (sorting === 'complete') { permutation_order = reorder.optimal_leaf_order()(set_gene_values); } // get dendogram out?
                         else if (sorting === 'pc1') { permutation_order = reorder.sort_order(genes_pc1); }
