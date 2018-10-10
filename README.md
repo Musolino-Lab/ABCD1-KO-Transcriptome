@@ -2,19 +2,24 @@
 
 
 
+
+manual gene list entry
+
+
+minimum non-zero
+
+
+UI for offset
+
+
 canvas / webgl
-
-
-colors
-
-
-PC1
 
 
 remove genes / gene sets / samples / sample sets
 
 
 legends
+and shuffle colors for meta so they aren't redundant
 
 
 hover
@@ -23,7 +28,5 @@ hover
 drag catg better
 
 
-genecards links
-
-
+frontend router
 

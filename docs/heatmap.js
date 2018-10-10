@@ -10,7 +10,7 @@ let pointing_right = (d) => ''+((d.x1 - d.x0) * 1 + (d.y1 - d.y0) * 1)+','+(d.x1
 let pointing_left = (d) => '0,'+((d.x1 - d.x0) * 1)+','+((d.x1 - d.x0) * 1 + (d.y1 - d.y0) * 2);
 Array.prototype.last = function() { return this[this.length - 1]; };
 Array.prototype.move = function(from, to) { this.splice(to, 0, this.splice(from, 1)[0]); };
-
+Array.prototype.insert = function(index, item) { this.splice( index, 0, item ); return this; };
 
 function Heatmap(samples_by_genes_matrix, gene_sets, classes, separate_by) {
 
@@ -39,31 +39,6 @@ function Heatmap(samples_by_genes_matrix, gene_sets, classes, separate_by) {
     var samples_to_small_bin = _(classes).mapObject(categories_to_values => Object.entries(categories_to_values).sort().reduce((acc, [category, value]) => (acc ? acc+'-'+value : value), ''));
     var small_bin_to_samples = _(Object.keys(samples_to_small_bin)).groupBy(sample => samples_to_small_bin[sample]);
 
-        // METADATA  // to order the levels: change the order of categories
-
-    var hierarchy = {'id':'metadata', 'children':[]};
-    Object.entries(classes).forEach(([sample_id, metadata]) => {
-        pointer = hierarchy.children;
-        prefix = 'metadata';
-        categories.forEach((category, i) => {
-            value = metadata[category];
-            prefix += '-'+safeStr(value);
-            existing_index_for_value = _(pointer).findIndex({'id':prefix});
-            if (existing_index_for_value > -1) {
-                if (i+1 === categories.length) { pointer[existing_index_for_value].children.push({'id':prefix+'-'+sample_id, 'name':sample_id}); }
-                else { pointer = pointer[existing_index_for_value].children; }
-            } else {
-                if (i+1 === categories.length) { pointer.push({'id':prefix,'name':value,'category':category,'children':[{'id':prefix+'-'+sample_id, 'name':sample_id}]}); }
-                else {
-                    pointer.push({'id':prefix,'name':value,'category':category,'children':[]});
-                    pointer = pointer[_(pointer).findIndex({'id':prefix})].children;
-                }
-            }
-        })
-    });
-    var metadata = d3.hierarchy(hierarchy);
-
-
     /////////////////////////////////////////////////////////////////////////////
                     ///////    Structure Variables    ///////
     /////////////////////////////////////////////////////////////////////////////
@@ -79,13 +54,6 @@ function Heatmap(samples_by_genes_matrix, gene_sets, classes, separate_by) {
     var reordering = true;
     var minimum_nonzero = 0;
 
-    value_accessors = {
-        counts: (gene) => gene.counts,
-        zscore_stddev: (gene) => gene.samples.map((sample) => sample.zscore_stddev),
-        zscore_mad: (gene) => gene.samples.map((sample) => sample.zscore_mad),
-        pc1: (gene) => gene.samples.map((sample) => sample.pc1),
-    }
-    value_accessor = value_accessors.counts;
 
     /////////////////////////////////////////////////////////////////////////////
                     ///////    Styling Variables    ///////
@@ -98,12 +66,13 @@ function Heatmap(samples_by_genes_matrix, gene_sets, classes, separate_by) {
 
     var category_colors = _.object(categories.map((category) => [category, d3.scaleOrdinal(d3.schemeCategory10)]))
 
-    var colors = {};
+    var color_style = 'interpolateTriplet'
+    var colors = null;
 
     var spacing = 1;
     var rect_width = 16;
     var rect_height = 16;
-    var max_font_size = 16;
+
     var margins = {'sample_id': {'2': 10}, 'gene_id': {'1': 10}};
     var styles = {
         'nodes': {
@@ -112,17 +81,10 @@ function Heatmap(samples_by_genes_matrix, gene_sets, classes, separate_by) {
             'gene_id': {
                 'fill-opacity': 0,
                 'stroke': 'black',
-                'stroke-dasharray': d => (x_axis_nodes_position === 'before' ? pointing_right(d) : pointing_left(d))}
+                'stroke-dasharray': d => pointing_right(d)}
         },
         'leaves': { 'sample_id': {}, 'gene_id': {}, }
     };
-    var text_styles = {
-        'font-family': 'sans-serif',
-        'font-weight': 300,
-        'cursor': 'pointer',
-        'text-anchor': 'start',
-    };
-
 
     var y_axis_leaves_position = 'before';
     var y_axis_nodes_position = 'before';
@@ -136,9 +98,10 @@ function Heatmap(samples_by_genes_matrix, gene_sets, classes, separate_by) {
     var x_categories = categories;
     var y_categories = ['Gene Set'];
     var y_axis_leaves_x, y_axis_nodes_x, x_axis_nodes_y, x_axis_leaves_y;
-    var x_axis_leaves_rotation = (x_axis_leaves_position === 'before') ? -60 : 60;
-
-    let text_max_width = (tree, font_size) => d3.max(tree.leaves().map(leaf => leaf.data.name.length)) * font_size;
+    var rotation = 60;
+    var x_axis_leaves_rotation = (x_axis_leaves_position === 'before') ? -rotation : rotation;
+    var y_font_size, x_font_size, x_cat_font_size, y_cat_font_size;
+    var show_x_level_names = true, show_y_level_names = true;
 
     // position[display_style][nodes_or_leaves]: (params) => int;
     var axis_position = {
@@ -156,6 +119,17 @@ function Heatmap(samples_by_genes_matrix, gene_sets, classes, separate_by) {
         }
     };
 
+    var max_font_size = 16;
+    var text_styles = {
+        'font-family': 'sans-serif',
+        'font-weight': 300,
+        'cursor': 'pointer',
+        'text-anchor': 'start',
+    };
+
+    let text_max_width = (tree, font_size) => d3.max(tree.leaves().map(leaf => leaf.data.name.length)) * font_size;
+
+
     /////////////////////////////////////////////////////////////////////////////
                           ///////    Set Up Chart    ///////
     /////////////////////////////////////////////////////////////////////////////
@@ -166,6 +140,7 @@ function Heatmap(samples_by_genes_matrix, gene_sets, classes, separate_by) {
 
     var selected_gene_sets = {}
     var genes = [];
+    var metadata = {};
     var gene_wise = [];
     var gene_wise_indexer = {};
     var ordered_gene_wise = [];
@@ -250,6 +225,7 @@ function Heatmap(samples_by_genes_matrix, gene_sets, classes, separate_by) {
                 'sample_id' : null,  // assigned later
                 'gene'      : gene,
                 'count'     : count,
+                'logcount'  : Math.log10(count+1),
             }})
          );
 
@@ -292,7 +268,31 @@ function Heatmap(samples_by_genes_matrix, gene_sets, classes, separate_by) {
         values = values_;
         sorting = sorting_;
         minimum_nonzero = minimum_nonzero_;
-        value_accessor = value_accessors[values];
+
+        // METADATA  // to order the levels: change the order of categories
+
+        hierarchy = {'id':'metadata', 'children':[]};
+        Object.entries(classes).forEach(([sample_id, metadata]) => {
+            pointer = hierarchy.children;
+            prefix = 'metadata';
+            categories.forEach((category, i) => {
+                value = metadata[category];
+                prefix += '-'+safeStr(value);
+                existing_index_for_value = _(pointer).findIndex({'id':prefix});
+                if (existing_index_for_value > -1) {
+                    if (i+1 === categories.length) { pointer[existing_index_for_value].children.push({'id':prefix+'-'+sample_id, 'name':sample_id}); }
+                    else { pointer = pointer[existing_index_for_value].children; }
+                } else {
+                    if (i+1 === categories.length) { pointer.push({'id':prefix,'name':value,'category':category,'children':[{'id':prefix+'-'+sample_id, 'name':sample_id}]}); }
+                    else {
+                        pointer.push({'id':prefix,'name':value,'category':category,'children':[]});
+                        pointer = pointer[_(pointer).findIndex({'id':prefix})].children;
+                    }
+                }
+            })
+        });
+
+        metadata = d3.hierarchy(hierarchy);
 
         sample_to_sample_id = _.object(metadata.leaves().map(leaf => [leaf.data.name, leaf.data.id]));
         sample_wise.forEach(by_sample => by_sample.forEach(sample => sample.sample_id = sample_to_sample_id[sample.sample]));
@@ -309,10 +309,6 @@ function Heatmap(samples_by_genes_matrix, gene_sets, classes, separate_by) {
 
         if (ordered_gene_wise.length === 0) { return; }  // do something smart here.
 
-        // Set Gene-Wise PC1
-        // genes_pc1 = reorder.pca1d(reorder.transpose(ordered_gene_wise.map(value_accessor)));
-        // _(_.zip(ordered_gene_wise, genes_pc1)).each((gene, pc1) => gene.pc1 = pc1);
-
         if (reordering && ordered_gene_wise.length > 1) {
 
             counter = 0;
@@ -322,9 +318,13 @@ function Heatmap(samples_by_genes_matrix, gene_sets, classes, separate_by) {
 
                     set_gene_ids = node.children.map(gene => gene.data.id);
                     set_genes = ordered_gene_wise.filter(bygene => set_gene_ids.includes(bygene[0].gene_id));
-                    set_gene_values = set_genes.map(bygene => bygene.map(gene => gene[values]));
+                    set_gene_values = set_genes.map(bygene => bygene.map(gene => gene[values] || 0));
 
                     if (set_gene_values.length > 1) {
+
+                        // Set Gene-Wise PC1
+                        genes_pc1 = reorder.pca1d(reorder.transpose(set_gene_values));
+                        _.zip(set_genes, genes_pc1).forEach(([by_gene, pc1]) => by_gene.forEach(d => d.pc1 = pc1));
 
                         if (sorting === 'complete') { permutation_order = reorder.optimal_leaf_order()(set_gene_values); } // get dendogram out?
                         else if (sorting === 'pc1') { permutation_order = reorder.sort_order(genes_pc1); }
@@ -389,11 +389,18 @@ function Heatmap(samples_by_genes_matrix, gene_sets, classes, separate_by) {
 
     }
 
+    function set_colors() {
+        values_domain = d3.extent(flatten(gene_wise), d => d[values]);
+
+        if (color_style === 'interpolateTriplet') {
+            colors = d3.scaleLinear().domain(values_domain.insert(1, 0)).range([negative_color, middle_color, positive_color]); }
+        else {
+            colors = d3.scaleSequential(d3[color_style]).domain(values_domain); }
+    }
+
     function set_transposition(t_) {
 
         t = t_ ? true : false;
-
-        // [y_axis_style, x_axis_style] = [x_axis_style, y_axis_style];
 
         if (t) {
 
@@ -443,13 +450,15 @@ function Heatmap(samples_by_genes_matrix, gene_sets, classes, separate_by) {
 
         y_font_size = Math.min(rect_height-spacing, max_font_size);
         x_font_size = Math.min(rect_width-spacing, max_font_size);
+        x_cat_font_size = Math.min(x_axis_nodes_y_height-spacing, max_font_size);
+        y_cat_font_size = Math.min(y_axis_nodes_x_width-spacing, max_font_size);
 
         y_axis_leaves_x = axis_position[y_axis_style]['leaves'](y_axis_nodes_position, y_axis_leaves_position, y_tree, x_tree, y_axis_nodes_x_width, text_max_width(y_tree, y_font_size));
         y_axis_nodes_x  = axis_position[y_axis_style]['nodes']( y_axis_nodes_position, y_axis_leaves_position, y_tree, x_tree, y_axis_nodes_x_width, text_max_width(y_tree, y_font_size));
         x_axis_leaves_y = axis_position[x_axis_style]['leaves'](x_axis_nodes_position, x_axis_leaves_position, x_tree, y_tree, x_axis_nodes_y_height, text_max_width(x_tree, x_font_size)*2/3);
         x_axis_nodes_y  = axis_position[x_axis_style]['nodes']( x_axis_nodes_position, x_axis_leaves_position, x_tree, y_tree, x_axis_nodes_y_height, text_max_width(x_tree, x_font_size)*2/3);
 
-        x_axis_leaves_rotation = (x_axis_leaves_position === 'before') ? -60 : 60;
+        x_axis_leaves_rotation = (x_axis_leaves_position === 'before') ? -rotation : rotation;
 
         x_category_y = _.object(x_categories.map((c, i) => [c, x_axis_nodes_y + x_axis_nodes_y_height*(i+1)]));
         y_category_x = _.object(y_categories.map((c, i) => [c, y_axis_nodes_x + y_axis_nodes_x_width*(i+1)]));
@@ -457,6 +466,7 @@ function Heatmap(samples_by_genes_matrix, gene_sets, classes, separate_by) {
     }
 
     function render({
+        spacing_=spacing,
         y_axis_leaves_position_=y_axis_leaves_position,
         y_axis_nodes_position_=y_axis_nodes_position,
         y_axis_style_=y_axis_style,
@@ -464,6 +474,7 @@ function Heatmap(samples_by_genes_matrix, gene_sets, classes, separate_by) {
         x_axis_nodes_position_=x_axis_nodes_position,
         x_axis_style_=x_axis_style,}={}) {
 
+        spacing = spacing_;
         y_axis_leaves_position = y_axis_leaves_position_;
         y_axis_nodes_position = y_axis_nodes_position_;
         y_axis_style = y_axis_style_;
@@ -471,7 +482,10 @@ function Heatmap(samples_by_genes_matrix, gene_sets, classes, separate_by) {
         x_axis_nodes_position = x_axis_nodes_position_;
         x_axis_style = x_axis_style_;
 
+        console.log(spacing);
+
         position();
+        set_colors();
 
         rect = g.selectAll('.rect').data(flatten(ordered_gene_wise), d => d.id);
         ytre = g.selectAll('.ytre').data(y_tree.descendants(), d => d.data.id);
@@ -495,7 +509,7 @@ function Heatmap(samples_by_genes_matrix, gene_sets, classes, separate_by) {
 
         // phase 2
             // re-arrange ROWS
-        rect.transition(t_last).attr('y', d => y[d[y_attr]]).attr('height', rect_height-spacing);
+        rect.transition(t_last).attr('y', d => y[d[y_attr]]).attr('height', rect_height-spacing).style('fill', d => colors(d[values]));
         ytre.filter(node => node.height === 0).transition(t_last).attr('y', d => y[d.data.id])
                                                                  .attr('x', y_axis_leaves_x)
                                                                  .style('text-anchor', (y_axis_leaves_position === 'before' ? 'end' : 'start'))
@@ -503,7 +517,7 @@ function Heatmap(samples_by_genes_matrix, gene_sets, classes, separate_by) {
                                                                  .attr('dy', y_font_size);
         ytre.filter(node => node.depth > 0 && node.height > 0).transition(t_last).attr('transform', d => 'translate('+(y_axis_nodes_x + d.y0)+','+d.x1+')rotate(-90)');
         ytre.filter(node => node.depth > 0 && node.height > 0).select('.ytre_box').transition(t_last).attr('width', d => d.x1 - d.x0).attr('height', d => d.y1 - d.y0).style('stroke-dasharray', d => (y_axis_nodes_position === 'before' ? pointing_right(d) : pointing_left(d)));
-        ycat.transition(t_last).attr('y', x_axis_leaves_y).attr('x', d => y_category_x[d]).attr('dy', (x_axis_leaves_position === 'before' ? y_font_size : 0))
+        ycat.transition(t_last).attr('y', x_axis_leaves_y).attr('x', d => y_category_x[d]).attr('dy', (x_axis_leaves_position === 'before' ? y_cat_font_size : 0))
                                .attr('transform', d => 'rotate('+x_axis_leaves_rotation+','+y_category_x[d]+','+x_axis_leaves_y+')');
         t_last = t_last.transition().duration(500);
 
@@ -516,7 +530,7 @@ function Heatmap(samples_by_genes_matrix, gene_sets, classes, separate_by) {
                                                                  .style('font-size', x_font_size)
                                                                  .attr('dy', (x_axis_leaves_position === 'before' ? x_font_size : 0));
         xtre.filter(node => node.depth > 0 && node.height > 0).transition(t_last).attr('transform', d => 'translate('+d.x0+','+(x_axis_nodes_y + d.y0)+')');
-        xtre.filter(node => node.depth > 0 && node.height > 0).select('.xtre_box').transition(t_last).attr('width', d => d.x1 - d.x0).attr('height', d => d.y1 - d.y0).style('stroke-dasharray', d => (y_axis_nodes_position === 'before' ? pointing_right(d) : pointing_left(d)));
+        xtre.filter(node => node.depth > 0 && node.height > 0).select('.xtre_box').transition(t_last).attr('width', d => d.x1 - d.x0).attr('height', d => d.y1 - d.y0).style('stroke-dasharray', d => (x_axis_nodes_position === 'before' ? pointing_right(d) : pointing_left(d)));
         xcat.transition(t_last).attr('x', y_axis_leaves_x).attr('y', d => x_category_y[d]).style('text-anchor', (y_axis_leaves_position === 'before' ? 'end' : 'start'));
         t_last = t_last.transition().duration(500);
 
@@ -536,6 +550,7 @@ function Heatmap(samples_by_genes_matrix, gene_sets, classes, separate_by) {
             .text(d => d.data.name)
             .styles(text_styles)
             .style('font-size', x_font_size)
+            .on('click', (d) => (x_attr === 'gene_id' ? GeneCards(d.data.name) : null))
             .call(d3.drag().on('drag', drag_x).on('end', drag_x_end))
             .style('opacity', 0).transition(t_last).style('opacity', 1);
 
@@ -577,8 +592,8 @@ function Heatmap(samples_by_genes_matrix, gene_sets, classes, separate_by) {
             .text(d => d)
             .attr('x', y_axis_leaves_x)
             .attr('y', d => x_category_y[d])
-            .attr('dy', '0.8em')
-            .style('font-size', Math.min(x_axis_nodes_y_height-spacing, max_font_size))
+            .style('font-size', x_cat_font_size)
+            .attr('dy', x_cat_font_size)
             .styles(text_styles)
             .style('text-anchor', (y_axis_leaves_position === 'before' ? 'end' : 'start'))
             .call(d3.drag().on('drag', drag_xcat).on('end', drag_xcat_end))
@@ -597,7 +612,7 @@ function Heatmap(samples_by_genes_matrix, gene_sets, classes, separate_by) {
             .styles(text_styles)
             .style('text-anchor', (y_axis_leaves_position === 'before' ? 'end' : 'start'))
             .attr('dy', y_font_size)
-            .on('click', (d) => GeneCards(d.data.name))
+            .on('click', (d) => (y_attr === 'gene_id' ? GeneCards(d.data.name) : null))
             .call(d3.drag().on('drag', drag_y).on('end', drag_y_end))
             .style('opacity', 0).transition(t_last).style('opacity', 1);
 
@@ -640,7 +655,7 @@ function Heatmap(samples_by_genes_matrix, gene_sets, classes, separate_by) {
             .attr('x', d => y_category_x[d])
             .attr('y', x_axis_leaves_y)
             .attr('transform', d => 'rotate('+x_axis_leaves_rotation+','+y_category_x[d]+','+x_axis_leaves_y+')')
-            .style('font-size', Math.min(x_axis_nodes_y_height-spacing, max_font_size))
+            .style('font-size', y_cat_font_size)
             .styles(text_styles)
             .attr('dx', '0.2em')
             .call(d3.drag().on('drag', drag_ycat).on('end', drag_ycat_end))
@@ -655,7 +670,7 @@ function Heatmap(samples_by_genes_matrix, gene_sets, classes, separate_by) {
             .attr('y', d => y[d[y_attr]])
             .attr('width', rect_width-spacing)
             .attr('height', rect_height-spacing)
-            // .attr('fill', d => colors[values](d[values]))
+            .attr('fill', d => colors(d[values]))
             .style('opacity', 0).transition(t_last).style('opacity', 1);
 
 
@@ -663,33 +678,40 @@ function Heatmap(samples_by_genes_matrix, gene_sets, classes, separate_by) {
         g.select('#xtre_resizer').attr('cx', d3.max(Object.values(x))+rect_width).attr('cy', x_axis_nodes_y + (x_axis_nodes_position === 'before' ? x_axis_nodes_y_height : x_axis_nodes_y_height*x_tree.height));
         g.select('#ytre_resizer').attr('cx', y_axis_nodes_x + (y_axis_nodes_position === 'before' ? y_axis_nodes_x_width : y_axis_nodes_x_width*y_tree.height)).attr('cy', d3.max(Object.values(y))+rect_height);
 
-        style();
-
     }
 
-    function style({negative_color_=negative_color,
+    function style({color_style_=color_style,
+                    negative_color_=negative_color,
                     middle_color_=middle_color,
                     positive_color_=positive_color,
-                    show_legends_=show_legends}={}) {
+                    show_legends_=show_legends,
+                    show_x_level_names_=show_x_level_names,
+                    show_y_level_names_=show_y_level_names,
+                    rotation_=rotation}={}) {
 
+        color_style = color_style_;
         negative_color = negative_color_,
         middle_color = middle_color_,
         positive_color = positive_color_,
         show_legends = show_legends_;
+        show_x_level_names = show_x_level_names_;
+        show_y_level_names = show_y_level_names_;
+        rotation = rotation_;
 
-        all_values = flatten(gene_wise);
+        // Colors
+        set_colors();
+        g.selectAll('.rect').style('fill', (d) => colors(d[values]));
 
-        colors = {
-            zscore_stddev:  d3.scaleLinear().domain([d3.min(all_values, d => d.zscore_stddev), 0, d3.max(all_values, d => d.zscore_stddev)]).range([negative_color, middle_color, positive_color]),
-            zscore_mad:     d3.scaleLinear().domain([d3.min(all_values, d => d.zscore_mad),    0, d3.max(all_values, d => d.zscore_mad)]   ).range([negative_color, middle_color, positive_color]),
-            pc1:            d3.scaleLinear().domain([d3.min(all_values, d => d.pc1),           0, d3.max(all_values, d => d.pc1)]          ).range([negative_color, middle_color, positive_color]),
-        }
+        // Hide / Show & Rotate Labels
+        x_axis_leaves_rotation = (x_axis_leaves_position === 'before') ? -rotation : rotation;
 
-        g.selectAll('.rect')
-            .style('fill', (d) => colors[values](d[values]));
+        g.selectAll('.xcat').attr('visibility', show_x_level_names ? 'visible' : 'hidden');
+        g.selectAll('.ycat').attr('visibility', show_y_level_names ? 'visible' : 'hidden')
+                            .attr('transform', d => 'rotate('+x_axis_leaves_rotation+','+y_category_x[d]+','+x_axis_leaves_y+')');
 
+        g.selectAll('.xtre').filter(node => node.height === 0).attr('transform', d => 'rotate('+x_axis_leaves_rotation+','+d.x0+','+x_axis_leaves_y+')');
 
-
+        // Legends
         if (show_legends) {
 
         } else {
@@ -730,7 +752,9 @@ function Heatmap(samples_by_genes_matrix, gene_sets, classes, separate_by) {
         ytre.filter(node => node.depth > 0 && node.height > 0).select('.ytre_box').attr('width', d => d.x1 - d.x0).attr('height', d => d.y1 - d.y0).style('stroke-dasharray', d => (y_axis_nodes_position === 'before' ? pointing_right(d) : pointing_left(d)));
         ycat.attr('y', x_axis_leaves_y)
             .attr('x', d => y_category_x[d])
-            .attr('transform', d => 'rotate('+x_axis_leaves_rotation+','+y_category_x[d]+','+x_axis_leaves_y+')');
+            .attr('transform', d => 'rotate('+x_axis_leaves_rotation+','+y_category_x[d]+','+x_axis_leaves_y+')')
+            .style('font-size', y_cat_font_size)
+            .attr('dy', (x_axis_leaves_position === 'before' ? y_cat_font_size : 0));
 
         xtre.filter(node => node.height === 0).attr('x', d => d.x0)
                                               .attr('y', x_axis_leaves_y)
@@ -740,7 +764,9 @@ function Heatmap(samples_by_genes_matrix, gene_sets, classes, separate_by) {
         xtre.filter(node => node.depth > 0 && node.height > 0).attr('transform', d => 'translate('+d.x0+','+(x_axis_nodes_y + d.y0)+')');
         xtre.filter(node => node.depth > 0 && node.height > 0).select('.xtre_box').attr('width', d => d.x1 - d.x0).attr('height', d => d.y1 - d.y0).style('stroke-dasharray', d => (y_axis_nodes_position === 'before' ? pointing_right(d) : pointing_left(d)));
         xcat.attr('x', y_axis_leaves_x)
-            .attr('y', d => x_category_y[d]);
+            .attr('y', d => x_category_y[d])
+            .style('font-size', x_cat_font_size)
+            .attr('dy', x_cat_font_size);
 
     }
 
@@ -882,7 +908,6 @@ function Heatmap(samples_by_genes_matrix, gene_sets, classes, separate_by) {
     // Drag Resizers
 
     function drag_rect_resizer(d) {
-
         d3.select(this).attr('cx', d3.event.x).attr('cy', d3.event.y);
         resize_fig({
             'rect_width_': Math.max((d3.event.x - x_tree.leaves().last().offset), x_tree.leaves().length*2) / x_tree.leaves().length,
@@ -891,18 +916,18 @@ function Heatmap(samples_by_genes_matrix, gene_sets, classes, separate_by) {
     }
 
     function drag_xtre_resizer(d) {
-
         d3.select(this).attr('cx', d3.event.x).attr('cy', d3.event.y);
         resize_fig({
-            'x_axis_nodes_y_height_': x_axis_nodes_y_height + (x_axis_nodes_position === 'before' ? -1 : 1) * (d3.event.dy / (x_tree.height-1))
+            'x_axis_nodes_y_height_': Math.max(x_axis_nodes_y_height + (x_axis_nodes_position === 'before' ? -1 : 1) * (d3.event.dy / (x_tree.height-1)), 4),
+            'rect_width_': Math.max((d3.event.x - x_tree.leaves().last().offset), x_tree.leaves().length*2) / x_tree.leaves().length,
         });
     }
 
     function drag_ytre_resizer(d) {
-
         d3.select(this).attr('cx', d3.event.x).attr('cy', d3.event.y);
         resize_fig({
-            'y_axis_nodes_x_width_': y_axis_nodes_x_width + (y_axis_nodes_position === 'before' ? -1 : 1) * (d3.event.dx / (y_tree.height-1))
+            'y_axis_nodes_x_width_': Math.max(y_axis_nodes_x_width + (y_axis_nodes_position === 'before' ? -1 : 1) * (d3.event.dx / (y_tree.height-1)), 4),
+            'rect_height_': Math.max((d3.event.y - y_tree.leaves().last().offset), y_tree.leaves().length*2) / y_tree.leaves().length,
         });
     }
 
@@ -945,7 +970,11 @@ function Heatmap(samples_by_genes_matrix, gene_sets, classes, separate_by) {
         if (d3.event.ctrlKey) {
             current_transform.k = clamp(0.1, 5)(current_transform.k - d3.event.deltaY * 0.01);
         } else {
-            current_transform.y = clamp(-(genes.leaves().length*rect_height-100), h)(current_transform.y - d3.event.deltaY);
+            if (t) {
+                current_transform.x = clamp(-(x_tree.x1-100), w)(current_transform.x - d3.event.deltaY);
+            } else {
+                current_transform.y = clamp(-(y_tree.x1-100), h)(current_transform.y - d3.event.deltaY);
+            }
         }
         g.attr('transform', current_transform);
     }
@@ -971,7 +1000,7 @@ function Heatmap(samples_by_genes_matrix, gene_sets, classes, separate_by) {
         'order'       : order,
         'style'       : style,
 
-        transpose     : function() { t = !t; [rect_width, rect_height] = [rect_height, rect_width]; render(); },
+        transpose     : function() { t = !t; [rect_width, rect_height] = [rect_height, rect_width]; [y_axis_style, x_axis_style] = [x_axis_style, y_axis_style]; render(); },
 
         get_sorted_genes: () => genes,
 
