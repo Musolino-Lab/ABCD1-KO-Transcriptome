@@ -63,7 +63,7 @@
                             <br>
                             <div id="values">
                                 <label>Show Gene Values of</label>
-                                <div class="form-check"><input class="form-check-input" type="radio" name="values" value="counts">log₁₀ Original Counts</div>
+                                <div class="form-check"><input class="form-check-input" type="radio" name="values" value="logcount">log₁₀ Original Counts</div>
                                 <div class="form-check"><input class="form-check-input" type="radio" name="values" value="zscore_stddev" checked> Z-Scores (Standard Deviations)</div>
                                 <div class="form-check"><input class="form-check-input" type="radio" name="values" value="zscore_mad"> Z-Scores (Mean Absolute Deviation)</div>
                             </div>
@@ -72,6 +72,14 @@
                             <div id="sorting">
                                 <label>Sort Genes by</label>
                                 <div class="form-check"><input class="form-check-input" type="radio" name="sorting" value="complete" checked> Complete-Linkage Hierarchical Clustering and Optimal Leaf Ordering</div>
+                                <div id="distance" class="ml-3">
+                                    <label>Measure distance by</label>
+                                    <div class="form-check"><input class="form-check-input" type="radio" name="distance" value="euclidian" checked>Euclidian</div>
+                                    <div class="form-check" style="color: #bbb"><input class="form-check-input" type="radio" name="distance" value="pearson" disabled>Pearson</div>
+                                    <div class="form-check" style="color: #bbb"><input class="form-check-input" type="radio" name="distance" value="spearman_rank" disabled>Spearman Rank</div>
+                                    <div class="form-check" style="color: #bbb"><input class="form-check-input" type="radio" name="distance" value="kendall_tau" disabled>Kendall's tau</div>
+                                    <div class="form-check" style="color: #bbb"><input class="form-check-input" type="radio" name="distance" value="manhattan" disabled>Manhattan</div>
+                                </div>
                                 <div class="form-check"><input class="form-check-input" type="radio" name="sorting" value="pc1"> Principal Component 1 of genes in sample space</div>
                             </div>
                         </div>
@@ -85,6 +93,12 @@
                                 <div class="form-check"><input class="form-check-input" type="radio" name="colors" id="Triplet" value="interpolateTriplet" checked> along <input type="color" value="#0000cc" id="negative_color"> <input type="color" value="#c0c0c0" id="middle_color"> <input type="color" value="#cc0000" id="positive_color"></div>
                                 <div class="form-check"><input class="form-check-input" type="radio" name="colors" id="Viridis" value="interpolateViridis"> Viridis</div>
                                 <div class="form-check"><input class="form-check-input" type="radio" name="colors" id="Magma" value="interpolateMagma"> Magma</div>
+                            </div>
+
+                            <br>
+                            <div>
+                                <label style="display: inline" for="spacing">Spacing</label>
+                                <input type="range" id="spacing" name="spacing" min="0" max="2" step="0.01" value="1" style="position: relative; top: 3px; display: inline">
                             </div>
 
                             <br>
@@ -321,12 +335,13 @@ $("#colors input:radio").change(   function () { heatmap.style({'color_style_': 
 $("#negative_color").change(       function () { heatmap.style({'negative_color_': this.value}) });
 $("#middle_color").change(         function () { heatmap.style({'middle_color_': this.value}) });
 $("#positive_color").change(       function () { heatmap.style({'positive_color_': this.value}) });
+$("#spacing").change(              function () { heatmap.render({'spacing_': parseFloat(this.value)}); });
 
 $("#x_labels input:radio").change( function () { heatmap.render({'x_axis_leaves_position_': this.value}); });
 $("#x_meta input:radio").change(   function () { heatmap.render({'x_axis_nodes_position_': this.value}); });
 $("#x_style input:radio").change(  function () { heatmap.render({'x_axis_style_': this.value}); });
 $("#show_x_level_names").change(   function () { heatmap.style({'show_x_level_names_': this.checked}); });
-$("#rotation").change(             function () { heatmap.style({'rotation_': this.value}); });
+$("#rotation").change(             function () { heatmap.style({'rotation_': parseFloat(this.value)}); });
 $("#y_labels input:radio").change( function () { heatmap.render({'y_axis_leaves_position_': this.value}); });
 $("#y_meta input:radio").change(   function () { heatmap.render({'y_axis_nodes_position_': this.value}); });
 $("#y_style input:radio").change(  function () { heatmap.render({'y_axis_style_': this.value}); });

@@ -2,7 +2,11 @@
 
 
 
-values
+
+manual gene list entry
+
+
+minimum non-zero
 
 
 UI for offset
@@ -15,6 +19,7 @@ remove genes / gene sets / samples / sample sets
 
 
 legends
+and shuffle colors for meta so they aren't redundant
 
 
 hover

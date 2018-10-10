@@ -67,7 +67,7 @@ function Heatmap(samples_by_genes_matrix, gene_sets, classes, separate_by) {
     var category_colors = _.object(categories.map((category) => [category, d3.scaleOrdinal(d3.schemeCategory10)]))
 
     var color_style = 'interpolateTriplet'
-    var colors = () => null;
+    var colors = null;
 
     var spacing = 1;
     var rect_width = 16;
@@ -225,6 +225,7 @@ function Heatmap(samples_by_genes_matrix, gene_sets, classes, separate_by) {
                 'sample_id' : null,  // assigned later
                 'gene'      : gene,
                 'count'     : count,
+                'logcount'  : Math.log10(count+1),
             }})
          );
 
@@ -255,7 +256,6 @@ function Heatmap(samples_by_genes_matrix, gene_sets, classes, separate_by) {
         sample_wise_indexer = _.object(sample_wise.map((sample, i) => [sample[0].sample, i]));
 
         order();
-        set_colors();
         render();
 
     }
@@ -390,11 +390,10 @@ function Heatmap(samples_by_genes_matrix, gene_sets, classes, separate_by) {
     }
 
     function set_colors() {
-        all_values = flatten(gene_wise);
-        values_domain = d3.extent(all_values, d => d[values]).insert(1, 0);
+        values_domain = d3.extent(flatten(gene_wise), d => d[values]);
 
         if (color_style === 'interpolateTriplet') {
-            colors = d3.scaleLinear().domain(values_domain).range([negative_color, middle_color, positive_color]); }
+            colors = d3.scaleLinear().domain(values_domain.insert(1, 0)).range([negative_color, middle_color, positive_color]); }
         else {
             colors = d3.scaleSequential(d3[color_style]).domain(values_domain); }
     }
@@ -467,6 +466,7 @@ function Heatmap(samples_by_genes_matrix, gene_sets, classes, separate_by) {
     }
 
     function render({
+        spacing_=spacing,
         y_axis_leaves_position_=y_axis_leaves_position,
         y_axis_nodes_position_=y_axis_nodes_position,
         y_axis_style_=y_axis_style,
@@ -474,6 +474,7 @@ function Heatmap(samples_by_genes_matrix, gene_sets, classes, separate_by) {
         x_axis_nodes_position_=x_axis_nodes_position,
         x_axis_style_=x_axis_style,}={}) {
 
+        spacing = spacing_;
         y_axis_leaves_position = y_axis_leaves_position_;
         y_axis_nodes_position = y_axis_nodes_position_;
         y_axis_style = y_axis_style_;
@@ -481,7 +482,10 @@ function Heatmap(samples_by_genes_matrix, gene_sets, classes, separate_by) {
         x_axis_nodes_position = x_axis_nodes_position_;
         x_axis_style = x_axis_style_;
 
+        console.log(spacing);
+
         position();
+        set_colors();
 
         rect = g.selectAll('.rect').data(flatten(ordered_gene_wise), d => d.id);
         ytre = g.selectAll('.ytre').data(y_tree.descendants(), d => d.data.id);
@@ -505,7 +509,7 @@ function Heatmap(samples_by_genes_matrix, gene_sets, classes, separate_by) {
 
         // phase 2
             // re-arrange ROWS
-        rect.transition(t_last).attr('y', d => y[d[y_attr]]).attr('height', rect_height-spacing);
+        rect.transition(t_last).attr('y', d => y[d[y_attr]]).attr('height', rect_height-spacing).style('fill', d => colors(d[values]));
         ytre.filter(node => node.height === 0).transition(t_last).attr('y', d => y[d.data.id])
                                                                  .attr('x', y_axis_leaves_x)
                                                                  .style('text-anchor', (y_axis_leaves_position === 'before' ? 'end' : 'start'))
@@ -966,7 +970,11 @@ function Heatmap(samples_by_genes_matrix, gene_sets, classes, separate_by) {
         if (d3.event.ctrlKey) {
             current_transform.k = clamp(0.1, 5)(current_transform.k - d3.event.deltaY * 0.01);
         } else {
-            current_transform.y = clamp(-(genes.leaves().length*rect_height-100), h)(current_transform.y - d3.event.deltaY);
+            if (t) {
+                current_transform.x = clamp(-(x_tree.x1-100), w)(current_transform.x - d3.event.deltaY);
+            } else {
+                current_transform.y = clamp(-(y_tree.x1-100), h)(current_transform.y - d3.event.deltaY);
+            }
         }
         g.attr('transform', current_transform);
     }
