@@ -3,7 +3,10 @@
 
 
 
-manual gene list entry
+handle mix of individual genes and gene sets
+
+
+take everything out of the global scope
 
 
 minimum non-zero

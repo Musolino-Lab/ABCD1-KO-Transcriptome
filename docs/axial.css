@@ -1,4 +1,16 @@
+html {
+    overflow: hidden;
+    height: 100%;
+}
 
+body {
+    height: 100%;
+    overflow: auto;
+}
+
+.container-fluid, .menu, .card {
+    height: 100vh;
+}
 
 h1 { font-weight: 100; }
 #graph-container {
@@ -18,7 +30,6 @@ h1 { font-weight: 100; }
     padding: 0px;
 }
 .card {
-    min-height: 100vh;
     border-radius: 0;
 }
 
@@ -47,6 +58,14 @@ h1 { font-weight: 100; }
 .awesomplete {
     display: block !important;
 }
+
+#chooseGenes {
+    white-space: pre-wrap;
+    overflow: scroll;
+    min-height: 3em;
+    max-height: calc(100vh - 200px);
+}
+
 .link-unstyled, .link-unstyled:link {
     color: inherit;
     text-decoration: inherit;
@@ -82,5 +101,6 @@ input[type="radio"][disabled] + label {
 .axis line, .grid line {
     shape-rendering: crispEdges;
 }
+
 
 
