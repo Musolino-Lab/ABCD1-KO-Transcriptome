@@ -129,6 +129,12 @@ function Heatmap(samples_by_genes_matrix, gene_sets, classes, separate_zscore_by
 
     let text_max_width = (tree, font_size) => d3.max(tree.leaves().map(leaf => leaf.data.name.length)) * font_size;
 
+    var clear_styles = {
+        'fill': 'red',
+        'stroke': 'black',
+        'cursor': 'pointer',
+        'opacity': 0,
+    }
 
     /////////////////////////////////////////////////////////////////////////////
                           ///////    Set Up Chart    ///////
@@ -196,6 +202,7 @@ function Heatmap(samples_by_genes_matrix, gene_sets, classes, separate_zscore_by
     function restart({selected_gene_sets_=selected_gene_sets}={}) {
 
         selected_gene_sets = selected_gene_sets_;
+        console.log('restart', selected_gene_sets);
         selected_gene_sets = _.uniq(selected_gene_sets, false, (gs,i) => gs.gene_set_name ? gs.gene_set_name : i);  // gross, but how else do you keep all the nulls?
         keys = Object.keys(Object.values(samples_by_genes_matrix)[0]);  // genes included in matrix
 
@@ -215,6 +222,7 @@ function Heatmap(samples_by_genes_matrix, gene_sets, classes, separate_zscore_by
                             }}
                         })
                 });
+        console.log(genes);
 
         matrix = _(samples_by_genes_matrix).mapObject((sample) => _(sample).pick(genes.leaves().map(d => d.data.name)));
 
@@ -579,6 +587,16 @@ function Heatmap(samples_by_genes_matrix, gene_sets, classes, separate_zscore_by
                     .attr('xlink:href', d => '#rect-'+d.data.id)
                 .select(function() { return this.parentNode; })
             .select(function() { return this.parentNode; })
+                .append('rect')
+                .attr('class', 'ytre_clear')
+                .attr('id', d => 'clear-' + d.data.id)
+                .attr('x', d => d.x1 - d.x0 - (d.y1 - d.y0))
+                .attr('height', d => d.y1 - d.y0)
+                .attr('width', d => d.y1 - d.y0)
+                .styles(clear_styles)
+                .on('mouseover', function() { d3.select(this).style('opacity', 1)}).on('mouseout', function() { d3.select(this).style('opacity', 0)})
+                .on('click', remove_node)
+            .select(function() { return this.parentNode; })
             .style('opacity', 0).transition(t_last).style('opacity', 1);
 
         xcat.enter()
@@ -640,6 +658,16 @@ function Heatmap(samples_by_genes_matrix, gene_sets, classes, separate_zscore_by
                     .append('use')
                     .attr('xlink:href', d => '#rect-'+d.data.id)
                 .select(function() { return this.parentNode; })
+            .select(function() { return this.parentNode; })
+                .append('rect')
+                .attr('class', 'ytre_clear')
+                .attr('id', d => 'clear-' + d.data.id)
+                .attr('x', d => d.x1 - d.x0 - (d.y1 - d.y0))
+                .attr('height', d => d.y1 - d.y0)
+                .attr('width', d => d.y1 - d.y0)
+                .styles(clear_styles)
+                .on('mouseover', function() { d3.select(this).style('opacity', 1)}).on('mouseout', function() { d3.select(this).style('opacity', 0)})
+                .on('click', remove_node)
             .select(function() { return this.parentNode; })
             .style('opacity', 0).transition(t_last).style('opacity', 1);
 
@@ -758,6 +786,7 @@ function Heatmap(samples_by_genes_matrix, gene_sets, classes, separate_zscore_by
         ytre.filter(node => node.depth > 0 && node.height > 0).attr('transform', d => 'translate('+(y_axis_nodes_x + d.y0)+','+d.x1+')rotate(-90)')
         ytre.filter(node => node.depth > 0 && node.height > 0).select('.ytre_box').attr('width', d => d.x1 - d.x0).attr('height', d => d.y1 - d.y0).style('stroke-dasharray', d => (y_axis_nodes_position === 'before' ? pointing_right(d) : pointing_left(d)));
         ytre.filter(node => node.depth > 0 && node.height > 0).select('.ytre_label').style('font-size', ytre_label_font_size).attr('dy', ytre_label_font_size+spacing);
+        ytre.filter(node => node.depth > 0 && node.height > 0).select('.ytre_clear').attr('x', d => d.x1 - d.x0 - (d.y1 - d.y0)).attr('height', d => d.y1 - d.y0).attr('width', d => d.y1 - d.y0);
         ycat.attr('y', x_axis_leaves_y)
             .attr('x', d => y_category_x[d])
             .attr('transform', d => 'rotate('+x_axis_leaves_rotation+','+y_category_x[d]+','+x_axis_leaves_y+')')
@@ -772,6 +801,7 @@ function Heatmap(samples_by_genes_matrix, gene_sets, classes, separate_zscore_by
         xtre.filter(node => node.depth > 0 && node.height > 0).attr('transform', d => 'translate('+d.x0+','+(x_axis_nodes_y + d.y0)+')');
         xtre.filter(node => node.depth > 0 && node.height > 0).select('.xtre_box').attr('width', d => d.x1 - d.x0).attr('height', d => d.y1 - d.y0).style('stroke-dasharray', d => (y_axis_nodes_position === 'before' ? pointing_right(d) : pointing_left(d)));
         xtre.filter(node => node.depth > 0 && node.height > 0).select('.xtre_label').style('font-size', xtre_label_font_size).attr('dy', xtre_label_font_size+spacing);
+        xtre.filter(node => node.depth > 0 && node.height > 0).select('.xtre_clear').attr('x', d => d.x1 - d.x0 - (d.y1 - d.y0)).attr('height', d => d.y1 - d.y0).attr('width', d => d.y1 - d.y0);
         xcat.attr('x', y_axis_leaves_x)
             .attr('y', d => x_category_y[d])
             .style('font-size', x_cat_font_size)
@@ -942,6 +972,13 @@ function Heatmap(samples_by_genes_matrix, gene_sets, classes, separate_zscore_by
     }
 
 
+    function remove_node(d) {
+
+        console.log(d, d3.select(this));
+
+
+    }
+
 
     /////////////////////////////////////////////////////////////////////////////
                           ///////    Hover    ///////
@@ -1011,10 +1048,8 @@ function Heatmap(samples_by_genes_matrix, gene_sets, classes, separate_zscore_by
         'style'       : style,
 
         transpose     : function() { t = !t; [rect_width, rect_height] = [rect_height, rect_width]; [y_axis_style, x_axis_style] = [x_axis_style, y_axis_style]; render(); },
-
-        get_sorted_genes: () => genes,
-
-        set_reordering: (reordering_) => { reordering = reordering_; if (reordering) { order(); render(); } },
+        get_genes     : function() { return genes; },
+        set_reordering: function(reordering_) { reordering = reordering_; if (reordering) { order(); render(); } },
     }
 
 }

@@ -286,26 +286,24 @@ function gene_set_list_change(e) {
     }
 }
 $chooseGeneSets.on('input', _.debounce(gene_set_list_change, 100));
+$chooseGeneSets.on('blur', refresh_genes);
 
 function refresh_genes() {
-    var genes = heatmap.get_sorted_genes();
+    var genes = heatmap.get_genes();
     if ('leaves' in genes && genes.leaves()[0].depth > 0) {
         $chooseGenes.text(genes.leaves().filter(node => node.height === 0 && node.depth > 0).map(gene => gene.data.name).join(", "));
-        $chooseGeneSets.text(genes.descendants().filter(node => node.height === 1 && node.depth > 0).map(gs => gs.data.name).join(", "));
+        $chooseGeneSets.val(genes.descendants().filter(node => node.height === 1 && node.depth > 0).map(gs => gs.data.name).join(", "));
     } else {
         $chooseGenes.text("");
-        $chooseGeneSets.text("");
+        $chooseGeneSets.val("");
     }
 }
-
-
-
 
 function manual_gene_list_edit(e) {
 
     let flatten = (array) => [].concat.apply([], array);
 
-    genes = heatmap.get_sorted_genes();
+    genes = heatmap.get_genes();
 
     if ('leaves' in genes && genes.leaves()[0].depth > 0) {
         selected_gene_sets = genes.children.map(node => {
