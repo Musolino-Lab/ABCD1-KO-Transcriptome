@@ -127,7 +127,7 @@ function Heatmap(samples_by_genes_matrix, gene_sets, classes, separate_zscore_by
         'text-anchor': 'start',
     };
 
-    let text_max_width = (tree, font_size) => d3.max(tree.leaves().map(leaf => leaf.data.name.length)) * font_size;
+    let text_max_width = (tree, font_size) => (d3.max(tree.leaves().filter(leaf => leaf.depth > 0).map(leaf => leaf.data.name.length)) || 0) * font_size;
 
     var clear_styles = {
         'fill': 'red',
@@ -222,7 +222,8 @@ function Heatmap(samples_by_genes_matrix, gene_sets, classes, separate_zscore_by
                             }}
                         })
                 });
-        console.log(genes);
+
+        if (genes.data.children.length === 0) { return clear_fig(); }
 
         matrix = _(samples_by_genes_matrix).mapObject((sample) => _(sample).pick(genes.leaves().map(d => d.data.name)));
 
@@ -490,6 +491,8 @@ function Heatmap(samples_by_genes_matrix, gene_sets, classes, separate_zscore_by
 
         position();
         set_colors();
+
+        if (ordered_gene_wise.length === 0) { return clear_fig(); }
 
         rect = g.selectAll('.rect').data(flatten(ordered_gene_wise), d => d.id);
         ytre = g.selectAll('.ytre').data(y_tree.descendants(), d => d.data.id);
@@ -809,6 +812,9 @@ function Heatmap(samples_by_genes_matrix, gene_sets, classes, separate_zscore_by
 
     }
 
+    function clear_fig() {
+        g.selectAll('.rect,.ytre,.xtre,.xcat,.ycat').transition(d3.transition().duration(500)).style('opacity', 0).remove();
+    }
 
     ///////////////////////////////////////////////////////////////////////////
                           ///////      Drag      ///////
