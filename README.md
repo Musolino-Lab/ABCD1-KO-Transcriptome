@@ -3,7 +3,7 @@
 
 
 
-handle mix of individual genes and gene sets
+drag function handle mix of individual genes and gene sets
 
 
 take everything out of the global scope

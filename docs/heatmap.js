@@ -370,9 +370,9 @@ function Heatmap(samples_by_genes_matrix, gene_sets, classes, separate_zscore_by
 
         }
 
-        genes.count().sort(function(a, b) { return b.height - a.height || a.data.order - b.data.order; });
+        genes.count().sort(function(a, b) { return a.depth - b.depth || a.data.order - b.data.order; });
 
-        metadata.count().sort(function(a, b) { return b.height - a.height || a.data.order - b.data.order; });
+        metadata.count().sort(function(a, b) { return a.depth - b.depth || a.data.order - b.data.order; });
 
     }
 
@@ -386,20 +386,26 @@ function Heatmap(samples_by_genes_matrix, gene_sets, classes, separate_zscore_by
             node.sibling_index = counter; counter += 1;
         });
 
+        partition.offset = 0;
+        partition.num_left = 0;
+
         partition.each((node) => {
             if (node.parent) {
-                node.num_left = node.parent.children.filter(sibling => sibling.sibling_index !== undefined && sibling.sibling_index < node.sibling_index)
-                                                    .reduce((acc, sibling) => sum_counts_objects(acc, sibling.num_below), {});
+                left_siblings = node.parent.children.filter(sibling => sibling.sibling_index < node.sibling_index);
 
-                node.offset = d3.sum(Object.entries(node.num_left).map(([level, num]) => (margin[level] || 0)*(num))) + node.parent.offset;
+                number_of_left_height_decreases = d3.sum(left_siblings.map((sibling, i) => i === 0 ? 0 : +(sibling.height > left_siblings[i-1].height))) + (node.height > (left_siblings.length ? left_siblings.last().height : node.height));
+                max_sibling_height = d3.max(node.parent.children.map(sibling => d3.max(Object.keys(sibling.num_below).map(key => parseInt(key)))));
+                extra_margin_to_account_for_mixed_heights = number_of_left_height_decreases * (margin[max_sibling_height.toString()] || 0);
+
+                node.num_left = left_siblings.reduce((acc, sibling) => sum_counts_objects(acc, sibling.num_below), {});
+
+                node.offset = d3.sum(Object.entries(node.num_left).map(([level, num]) => (margin[level] || 0)*(num))) + node.parent.offset + extra_margin_to_account_for_mixed_heights;
                 node.x0 += node.offset;
-                node.x1 += node.offset + d3.sum(Object.entries(node.num_below).map(([level, num]) => (margin[level] || 0)*(num-1)));  // + number of leaves which have a null parent...
-            } else {
-                node.offset = 0;
-                node.num_left = 0;
-                node.x1 += d3.sum(Object.entries(node.num_below).map(([level, num]) => (margin[level] || 0)*(num-1)));  // + number of leaves which have a null parent...
+                node.x1 += node.offset + d3.sum(Object.entries(node.num_below).map(([level, num]) => (margin[level] || 0)*(num-1)));
             }
         });
+
+        partition.x1 += d3.max(partition.descendants().map(node => node.offset));
 
     }
 
@@ -892,7 +898,7 @@ function Heatmap(samples_by_genes_matrix, gene_sets, classes, separate_zscore_by
         hierarchy.each(node => { node.x = undefined; }); // do I even need this?
 
         old_index = hierarchy.leaves().map(leaf => leaf.data.id).indexOf(d.data.id);
-        hierarchy.sort(function(a, b) { return b.height - a.height || a.data.order - b.data.order; });
+        hierarchy.sort(function(a, b) { return a.depth - b.depth || a.data.order - b.data.order; });
         new_index = hierarchy.leaves().map(leaf => leaf.data.id).indexOf(d.data.id);
 
         this_wise.move(old_index, new_index);

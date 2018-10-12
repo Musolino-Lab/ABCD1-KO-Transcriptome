@@ -59,10 +59,10 @@ h1 { font-weight: 100; }
     display: block !important;
 }
 
-#chooseGenes {
+#chooseGenes, #chooseGeneSets {
     white-space: pre-wrap;
     overflow: scroll;
-    min-height: 3em;
+    min-height: 5em;
     max-height: calc(100vh - 200px);
 }
 
