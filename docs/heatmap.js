@@ -210,11 +210,12 @@ function Heatmap(samples_by_genes_matrix, gene_sets, classes, separate_zscore_by
                     'id': 'genes',
                     'children': selected_gene_sets.filter(gs => _.any(gs.genes, gene => keys.includes(gene))).map((gs, i) => {
                         if (gs.gene_set_name === null) {
-                            return {'gene_set':null, 'name':gs.genes[0], 'id':'other'+'_'+gs.genes[0]}
+                            return {'gene_set':null, 'name':gs.genes[0], 'order':i, 'id':'other'+'_'+gs.genes[0]}
                         } else {
                             return {
                                 'id': safeStr(gs.gene_set_name),
                                 'name': gs.gene_set_name,
+                                'order':i,
                                 'category': 'Gene Set',
                                 'children': _.uniq(gs.genes).filter(gene => keys.includes(gene)).map(gene => {
                                      return {'gene_set':gs.gene_set_name, 'name':gene, 'id':safeStr(gs.gene_set_name)+'_'+gene}
@@ -325,10 +326,8 @@ function Heatmap(samples_by_genes_matrix, gene_sets, classes, separate_zscore_by
 
         if (reordering && ordered_gene_wise.length > 1) {
 
-            counter = 0;
             genes.each(node => {
                 if (node.height === 1 && node.data.name !== null) {  // for each gene set
-                    node.data.order = counter; counter += 1;
 
                     set_gene_ids = node.children.map(gene => gene.data.id);
                     set_genes = ordered_gene_wise.filter(bygene => set_gene_ids.includes(bygene[0].gene_id));
@@ -600,11 +599,11 @@ function Heatmap(samples_by_genes_matrix, gene_sets, classes, separate_zscore_by
                 .select(function() { return this.parentNode; })
             .select(function() { return this.parentNode; })
                 .append('rect')
-                .attr('class', 'ytre_clear')
+                .attr('class', 'xtre_clear')
                 .attr('id', d => 'clear-' + d.data.id)
-                .attr('x', d => d.x1 - d.x0 - (d.y1 - d.y0))
-                .attr('height', d => d.y1 - d.y0)
-                .attr('width', d => d.y1 - d.y0)
+                .attr('x', d => d.x1 - d.x0 - x_axis_nodes_y_height)
+                .attr('height', d => x_axis_nodes_y_height)
+                .attr('width', d => x_axis_nodes_y_height)
                 .styles(clear_styles)
                 .on('mouseover', function() { d3.select(this).style('opacity', 1)}).on('mouseout', function() { d3.select(this).style('opacity', 0)})
                 .on('click', remove_node)
@@ -674,9 +673,9 @@ function Heatmap(samples_by_genes_matrix, gene_sets, classes, separate_zscore_by
                 .append('rect')
                 .attr('class', 'ytre_clear')
                 .attr('id', d => 'clear-' + d.data.id)
-                .attr('x', d => d.x1 - d.x0 - (d.y1 - d.y0))
-                .attr('height', d => d.y1 - d.y0)
-                .attr('width', d => d.y1 - d.y0)
+                .attr('x', d => d.x1 - d.x0 - y_axis_nodes_x_width)
+                .attr('height', d => y_axis_nodes_x_width)
+                .attr('width', d => y_axis_nodes_x_width)
                 .styles(clear_styles)
                 .on('mouseover', function() { d3.select(this).style('opacity', 1)}).on('mouseout', function() { d3.select(this).style('opacity', 0)})
                 .on('click', remove_node)
@@ -798,7 +797,7 @@ function Heatmap(samples_by_genes_matrix, gene_sets, classes, separate_zscore_by
         ytre.filter(node => node.depth > 0 && node.height > 0).attr('transform', d => 'translate('+(y_axis_nodes_x + d.y0)+','+d.x1+')rotate(-90)')
         ytre.filter(node => node.depth > 0 && node.height > 0).select('.ytre_box').attr('width', d => d.x1 - d.x0).attr('height', d => d.y1 - d.y0).style('stroke-dasharray', d => (y_axis_nodes_position === 'before' ? pointing_right(d) : pointing_left(d)));
         ytre.filter(node => node.depth > 0 && node.height > 0).select('.ytre_label').style('font-size', ytre_label_font_size).attr('dy', ytre_label_font_size+spacing);
-        ytre.filter(node => node.depth > 0 && node.height > 0).select('.ytre_clear').attr('x', d => d.x1 - d.x0 - (d.y1 - d.y0)).attr('height', d => d.y1 - d.y0).attr('width', d => d.y1 - d.y0);
+        ytre.filter(node => node.depth > 0 && node.height > 0).select('.ytre_clear').attr('x', d => d.x1 - d.x0 - 16);//.attr('height', y_axis_nodes_x_width).attr('width', y_axis_nodes_x_width);
         ycat.attr('y', x_axis_leaves_y)
             .attr('x', d => y_category_x[d])
             .attr('transform', d => 'rotate('+x_axis_leaves_rotation+','+y_category_x[d]+','+x_axis_leaves_y+')')
@@ -813,7 +812,7 @@ function Heatmap(samples_by_genes_matrix, gene_sets, classes, separate_zscore_by
         xtre.filter(node => node.depth > 0 && node.height > 0).attr('transform', d => 'translate('+d.x0+','+(x_axis_nodes_y + d.y0)+')');
         xtre.filter(node => node.depth > 0 && node.height > 0).select('.xtre_box').attr('width', d => d.x1 - d.x0).attr('height', d => d.y1 - d.y0).style('stroke-dasharray', d => (y_axis_nodes_position === 'before' ? pointing_right(d) : pointing_left(d)));
         xtre.filter(node => node.depth > 0 && node.height > 0).select('.xtre_label').style('font-size', xtre_label_font_size).attr('dy', xtre_label_font_size+spacing);
-        xtre.filter(node => node.depth > 0 && node.height > 0).select('.xtre_clear').attr('x', d => d.x1 - d.x0 - (d.y1 - d.y0)).attr('height', d => d.y1 - d.y0).attr('width', d => d.y1 - d.y0);
+        xtre.filter(node => node.depth > 0 && node.height > 0).select('.xtre_clear').attr('x', d => d.x1 - d.x0 - 16);//.attr('height', x_axis_nodes_y_height).attr('width', x_axis_nodes_y_height);
         xcat.attr('x', y_axis_leaves_x)
             .attr('y', d => x_category_y[d])
             .style('font-size', x_cat_font_size)
@@ -837,7 +836,7 @@ function Heatmap(samples_by_genes_matrix, gene_sets, classes, separate_zscore_by
         current_position_of_dragging_node = (d.x ? d.x : initial_position(d)) + (xy === 'x' ? d3.event.dx : d3.event.dy);
         dragging_node_width = d.x1 - d.x0;
 
-        set_nodes = hierarchy.descendants().filter(node => node.parent && node.parent.data.id === d.parent.data.id);
+        set_nodes = d.parent.children;
 
         let expr = (node) => {
 
