@@ -12,7 +12,7 @@ Array.prototype.last = function() { return this[this.length - 1]; };
 Array.prototype.move = function(from, to) { this.splice(to, 0, this.splice(from, 1)[0]); };
 Array.prototype.insert = function(index, item) { this.splice( index, 0, item ); return this; };
 
-function Heatmap(samples_by_genes_matrix, gene_sets, classes, separate_zscore_by, drag_node_cb) {
+function Heatmap(samples_by_genes_matrix, gene_sets, classes, separate_zscore_by, refresh_genes_cb) {
 
     // samples_by_genes_matrix: {'sample_id': {'gene1': float, 'gene2': float}};   // since this is an object, sample IDs and gene names are guaranteed to be unique.
 
@@ -283,7 +283,7 @@ function Heatmap(samples_by_genes_matrix, gene_sets, classes, separate_zscore_by
         // METADATA  // to order the levels: change the order of categories
 
         hierarchy = {'id':'metadata', 'children':[]};
-        Object.entries(classes).forEach(([sample_id, metadata]) => {
+        Object.entries(classes).filter(([sample_id, metadata]) => sample_id in samples_by_genes_matrix).forEach(([sample_id, metadata]) => {
             pointer = hierarchy.children;
             prefix = 'metadata';
             categories.forEach((category, i) => {
@@ -358,13 +358,18 @@ function Heatmap(samples_by_genes_matrix, gene_sets, classes, separate_zscore_by
 
                 samples = sample_wise.filter(by_sample => samples.includes(by_sample[0].sample));
                 sample_ids = samples.map(by_sample => by_sample[0].sample_id);
-                sample_values = samples.map(by_sample => by_sample.map(sample => sample[values]));
 
-                permutation_order = reorder.optimal_leaf_order()(sample_values);
-                sample_ids = reorder.stablepermute(sample_ids, permutation_order);
-                permutation_order = _.object(sample_ids.map((id, i) => [id, i]));
-                metadata.leaves().forEach((sample) => { if (sample.data.id in permutation_order) {sample.data.order = permutation_order[sample.data.id]} });
+                if (samples.length > 1) {
 
+                    sample_values = samples.map(by_sample => by_sample.map(sample => sample[values]));
+                    permutation_order = reorder.optimal_leaf_order()(sample_values);
+                    sample_ids = reorder.stablepermute(sample_ids, permutation_order);
+                    permutation_order = _.object(sample_ids.map((id, i) => [id, i]));
+                    metadata.leaves().forEach((sample) => { if (sample.data.id in permutation_order) {sample.data.order = permutation_order[sample.data.id]} });
+
+                } else if (samples.length === 1) {
+                    metadata.leaves().filter(leaf => leaf.data.id === sample_ids[0])[0].data.order = 0;
+                }
             });
 
         }
@@ -516,7 +521,7 @@ function Heatmap(samples_by_genes_matrix, gene_sets, classes, separate_zscore_by
         if (rect.exit().size() > 0 || ytre.exit().size() > 0 || xtre.exit().size() > 0 || xcat.exit().size() > 0 || ycat.exit().size() > 0) {
             rect.exit().transition(t_last).style('opacity', 0).remove();
             ytre.exit().transition(t_last).style('opacity', 0).remove();
-            xtre.exit().transition(t_last).style('opacity', 0).remove();
+            xtre.exit().transition(t_last).style('opacity', 0);//.remove();
             ycat.exit().transition(t_last).style('opacity', 0).remove();
             xcat.exit().transition(t_last).style('opacity', 0).remove();
             t_last = t_last.transition().duration(500);
@@ -532,6 +537,7 @@ function Heatmap(samples_by_genes_matrix, gene_sets, classes, separate_zscore_by
                                                                  .attr('dy', y_font_size);
         ytre.filter(node => node.depth > 0 && node.height > 0).transition(t_last).attr('transform', d => 'translate('+(y_axis_nodes_x + d.y0)+','+d.x1+')rotate(-90)');
         ytre.filter(node => node.depth > 0 && node.height > 0).select('.ytre_box').transition(t_last).attr('width', d => d.x1 - d.x0).attr('height', d => d.y1 - d.y0).style('stroke-dasharray', d => (y_axis_nodes_position === 'before' ? pointing_right(d) : pointing_left(d)));
+        ytre.filter(node => node.depth > 0 && node.height > 0).select('.ytre_clear').transition(t_last).attr('x', d => d.x1 - d.x0 - y_axis_nodes_x_width).attr('height', y_axis_nodes_x_width).attr('width', y_axis_nodes_x_width);
         ycat.transition(t_last).attr('y', x_axis_leaves_y).attr('x', d => y_category_x[d]).attr('dy', (x_axis_leaves_position === 'before' ? y_cat_font_size : 0))
                                .attr('transform', d => 'rotate('+x_axis_leaves_rotation+','+y_category_x[d]+','+x_axis_leaves_y+')');
         t_last = t_last.transition().duration(500);
@@ -546,6 +552,7 @@ function Heatmap(samples_by_genes_matrix, gene_sets, classes, separate_zscore_by
                                                                  .attr('dy', (x_axis_leaves_position === 'before' ? x_font_size : 0));
         xtre.filter(node => node.depth > 0 && node.height > 0).transition(t_last).attr('transform', d => 'translate('+d.x0+','+(x_axis_nodes_y + d.y0)+')');
         xtre.filter(node => node.depth > 0 && node.height > 0).select('.xtre_box').transition(t_last).attr('width', d => d.x1 - d.x0).attr('height', d => d.y1 - d.y0).style('stroke-dasharray', d => (x_axis_nodes_position === 'before' ? pointing_right(d) : pointing_left(d)));
+        xtre.filter(node => node.depth > 0 && node.height > 0).select('.xtre_clear').transition(t_last).attr('x', d => d.x1 - d.x0 - x_axis_nodes_y_height).attr('height', x_axis_nodes_y_height).attr('width', x_axis_nodes_y_height);
         xcat.transition(t_last).attr('x', y_axis_leaves_x).attr('y', d => x_category_y[d]).style('text-anchor', (y_axis_leaves_position === 'before' ? 'end' : 'start'));
         t_last = t_last.transition().duration(500);
 
@@ -797,7 +804,7 @@ function Heatmap(samples_by_genes_matrix, gene_sets, classes, separate_zscore_by
         ytre.filter(node => node.depth > 0 && node.height > 0).attr('transform', d => 'translate('+(y_axis_nodes_x + d.y0)+','+d.x1+')rotate(-90)')
         ytre.filter(node => node.depth > 0 && node.height > 0).select('.ytre_box').attr('width', d => d.x1 - d.x0).attr('height', d => d.y1 - d.y0).style('stroke-dasharray', d => (y_axis_nodes_position === 'before' ? pointing_right(d) : pointing_left(d)));
         ytre.filter(node => node.depth > 0 && node.height > 0).select('.ytre_label').style('font-size', ytre_label_font_size).attr('dy', ytre_label_font_size+spacing);
-        ytre.filter(node => node.depth > 0 && node.height > 0).select('.ytre_clear').attr('x', d => d.x1 - d.x0 - 16);//.attr('height', y_axis_nodes_x_width).attr('width', y_axis_nodes_x_width);
+        ytre.filter(node => node.depth > 0 && node.height > 0).select('.ytre_clear').attr('x', d => d.x1 - d.x0 - y_axis_nodes_x_width).attr('height', y_axis_nodes_x_width).attr('width', y_axis_nodes_x_width);
         ycat.attr('y', x_axis_leaves_y)
             .attr('x', d => y_category_x[d])
             .attr('transform', d => 'rotate('+x_axis_leaves_rotation+','+y_category_x[d]+','+x_axis_leaves_y+')')
@@ -812,7 +819,7 @@ function Heatmap(samples_by_genes_matrix, gene_sets, classes, separate_zscore_by
         xtre.filter(node => node.depth > 0 && node.height > 0).attr('transform', d => 'translate('+d.x0+','+(x_axis_nodes_y + d.y0)+')');
         xtre.filter(node => node.depth > 0 && node.height > 0).select('.xtre_box').attr('width', d => d.x1 - d.x0).attr('height', d => d.y1 - d.y0).style('stroke-dasharray', d => (y_axis_nodes_position === 'before' ? pointing_right(d) : pointing_left(d)));
         xtre.filter(node => node.depth > 0 && node.height > 0).select('.xtre_label').style('font-size', xtre_label_font_size).attr('dy', xtre_label_font_size+spacing);
-        xtre.filter(node => node.depth > 0 && node.height > 0).select('.xtre_clear').attr('x', d => d.x1 - d.x0 - 16);//.attr('height', x_axis_nodes_y_height).attr('width', x_axis_nodes_y_height);
+        xtre.filter(node => node.depth > 0 && node.height > 0).select('.xtre_clear').attr('x', d => d.x1 - d.x0 - x_axis_nodes_y_height).attr('height', x_axis_nodes_y_height).attr('width', x_axis_nodes_y_height);
         xcat.attr('x', y_axis_leaves_x)
             .attr('y', d => x_category_y[d])
             .style('font-size', x_cat_font_size)
@@ -906,7 +913,7 @@ function Heatmap(samples_by_genes_matrix, gene_sets, classes, separate_zscore_by
         other_wise.forEach((other) => other.move(old_index, new_index));
 
         render();
-        drag_node_cb();
+        refresh_genes_cb();
 
     }
 
@@ -987,9 +994,24 @@ function Heatmap(samples_by_genes_matrix, gene_sets, classes, separate_zscore_by
 
     function remove_node(d) {
 
-        console.log(d, d3.select(this));
+        if (d.ancestors().last().data.id === 'genes') {
+            restart({'selected_gene_sets_': rendered_gene_sets().filter(gs => gs.gene_set_name !== d.data.name)});
+            refresh_genes_cb();
 
+        } else if (d.ancestors().last().data.id === 'metadata') {
+            d.leaves().forEach(leaf => { delete samples_by_genes_matrix[leaf.data.name] });
+            restart();
+        }
+    }
 
+    function rendered_gene_sets() {
+        if ('children' in genes) {
+            return genes.children.map(node => {
+                if (node.height === 0) { return {'gene_set_name':null, 'genes':[node.data.name]} }
+                else { return {'gene_set_name': node.data.name, 'genes': node.children.map(gene => gene.data.name)} } });
+        } else {
+            return [];
+        }
     }
 
 
@@ -1060,8 +1082,9 @@ function Heatmap(samples_by_genes_matrix, gene_sets, classes, separate_zscore_by
         'order'       : order,
         'style'       : style,
 
+        'rendered_gene_sets': rendered_gene_sets,
+
         transpose     : function() { t = !t; [rect_width, rect_height] = [rect_height, rect_width]; [y_axis_style, x_axis_style] = [x_axis_style, y_axis_style]; render(); },
-        get_genes     : function() { return genes; },
         set_reordering: function(reordering_) { reordering = reordering_; if (reordering) { order(); render(); } },
     }
 

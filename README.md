@@ -6,9 +6,6 @@ minimum non-zero
 reorder
 
 
-remove genes / gene sets / samples / sample sets
-
-
 UI for offset
 
 
