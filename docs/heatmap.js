@@ -870,25 +870,24 @@ function Heatmap(samples_by_genes_matrix, gene_sets, classes, separate_zscore_by
             )
         );
 
-        g.selectAll('.'+xy+'tre').filter(node => node.height === 0 && node.data.id in updated_xy).each(node => {node.x = updated_xy[node.data.id]}).attr(xy, node => node.x);
+        var nodes = g.selectAll('.'+xy+'tre').filter(node => node.data.id in updated_xy).each(node => {node.x = updated_xy[node.data.id]});
+
         g.selectAll('.rect').filter(rect => updated_xy[rect[attr]]).attr(xy, (rect) => updated_xy[rect[attr]]);
+        nodes.filter(node => node.height === 0).attr(xy, node => node.x);
+        nodes.filter(node => node.height > 0).attr('transform', (node) => {
+            if (xy === 'x') { return 'translate('+node.x+','+(x_axis_nodes_y + node.y0)+')'; }
+            if (xy === 'y') { return 'translate('+(y_axis_nodes_x+node.y0)+','+node.x+')rotate(-90)'; }
+        });
 
         if (xy === 'x') {
-            g.selectAll('.'+xy+'tre').filter(node => node.height === 0 && node.data.id in updated_xy).attr('transform', node => 'rotate('+x_axis_leaves_rotation+','+node.x+','+x_axis_leaves_y+')');
-        }
-
-        if (d.height > 0) {
-            g.selectAll('.'+xy+'tre').filter(node => node.height > 0 && node.data.id in updated_xy).each(node => {node.x = updated_xy[node.data.id]}).attr('transform', function(node) {
-                if (xy === 'x') { return 'translate('+node.x+','+(x_axis_nodes_y + node.y0)+')'; }
-                if (xy === 'y') { return 'translate('+(y_axis_nodes_x+node.y0)+','+node.x+')rotate(-90)'; }
-            });
+            nodes.filter(node => node.height === 0).attr('transform', node => 'rotate('+x_axis_leaves_rotation+','+node.x+','+x_axis_leaves_y+')');
         }
 
     }
 
     function drag_node_end(d, hierarchy, xy, this_wise, other_wise) {
 
-        set_nodes = hierarchy.descendants().filter(node => node.parent && node.parent.data.id === d.parent.data.id);
+        set_nodes = d.parent.children;
 
         new_order = _.object(set_nodes.filter(node => node.data.id !== d.data.id)
                                        .map(node => [node.x, node.data.id])

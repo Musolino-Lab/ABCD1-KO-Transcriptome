@@ -2,23 +2,17 @@
 
 
 
-
-drag function handle mix of individual genes and gene sets
-
-
-take everything out of the global scope
-
-
 minimum non-zero
+reorder
+
+
+remove genes / gene sets / samples / sample sets
 
 
 UI for offset
 
 
-canvas / webgl
-
-
-remove genes / gene sets / samples / sample sets
+canvas / webgl / webgl2 (deck.gl) ?
 
 
 legends
@@ -32,4 +26,7 @@ drag catg better
 
 
 frontend router
+
+
+take everything out of the global scope
 
