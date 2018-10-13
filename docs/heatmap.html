@@ -289,8 +289,8 @@ $chooseGeneSets.on('blur', refresh_genes);
 
 function refresh_genes() {
     selected_gene_sets = heatmap.rendered_gene_sets();
-    $chooseGenes.text((str = flatten(selected_gene_sets.map(gene => gene.genes)).join(", ")) ? (str + ", ") : str);
-    $chooseGeneSets.val((str = selected_gene_sets.map(gene => gene.gene_set_name).join(", ")) ? (str + ", ") : str);
+    $chooseGenes.text((str = flatten(selected_gene_sets.map(gene => gene.genes)).filter(n => n).join(", ")) ? (str + ", ") : str);
+    $chooseGeneSets.val((str = selected_gene_sets.map(gene => gene.gene_set_name).filter(n => n).join(", ")) ? (str + ", ") : str);
 }
 
 function manual_gene_list_edit(e) {

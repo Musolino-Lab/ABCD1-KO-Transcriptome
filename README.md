@@ -9,9 +9,6 @@ reorder
 UI for offset
 
 
-canvas / webgl / webgl2 (deck.gl) ?
-
-
 legends
 and shuffle colors for meta so they aren't redundant
 
@@ -27,3 +24,5 @@ frontend router
 
 take everything out of the global scope
 
+
+canvas / webgl / webgl2 (deck.gl) ?
