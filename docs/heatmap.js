@@ -380,7 +380,7 @@ function Heatmap(samples_by_genes_matrix, gene_sets, classes, separate_zscore_by
 
         counter = 0; current_depth = 0;
         partition.each((node) => {
-            node.num_below = _(node.descendants().map(d => d.height)).countBy();
+            node.num_below = _(node.descendants().slice(1).map(d => d.height)).countBy();
 
             if (node.depth !== current_depth) { current_depth = node.depth; counter = 0; }
             node.sibling_index = counter; counter += 1;
@@ -391,15 +391,18 @@ function Heatmap(samples_by_genes_matrix, gene_sets, classes, separate_zscore_by
 
         partition.each((node) => {
             if (node.parent) {
-                left_siblings = node.parent.children.filter(sibling => sibling.sibling_index < node.sibling_index);
+                left_sibling = _(node.parent.children.filter(sibling => sibling.sibling_index < node.sibling_index)).sortBy(sibling => sibling.sibling_index).last();
 
-                number_of_left_height_decreases = d3.sum(left_siblings.map((sibling, i) => i === 0 ? 0 : +(sibling.height > left_siblings[i-1].height))) + (node.height > (left_siblings.length ? left_siblings.last().height : node.height));
-                max_sibling_height = d3.max(node.parent.children.map(sibling => d3.max(Object.keys(sibling.num_below).map(key => parseInt(key)))));
-                extra_margin_to_account_for_mixed_heights = number_of_left_height_decreases * (margin[max_sibling_height.toString()] || 0);
+                if (!left_sibling) {
+                    node.offset = node.parent.offset;
+                } else {
+                    node.offset = (
+                        left_sibling.offset +
+                        d3.sum(Object.entries(left_sibling.num_below).map(([level, num]) => (margin[level] || 0)*(num-1) )) +
+                        d3.max([(margin[node.height] || 0), (margin[left_sibling.height] || 0)])
+                    );
+                }
 
-                node.num_left = left_siblings.reduce((acc, sibling) => sum_counts_objects(acc, sibling.num_below), {});
-
-                node.offset = d3.sum(Object.entries(node.num_left).map(([level, num]) => (margin[level] || 0)*(num))) + node.parent.offset + extra_margin_to_account_for_mixed_heights;
                 node.x0 += node.offset;
                 node.x1 += node.offset + d3.sum(Object.entries(node.num_below).map(([level, num]) => (margin[level] || 0)*(num-1)));
             }
