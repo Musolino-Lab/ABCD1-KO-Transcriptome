@@ -52,7 +52,7 @@
 
 
                         <div class="tab-pane card-body fade" id="structure" role="tabpanel">
-                            <div><input type="checkbox" id="reordering" value="reordering" checked><label> Reset Gene Order on each change. </label></div>
+                            <div><input type="checkbox" id="reordering" value="reordering" checked><label for="reordering"> Reset Gene Order on each change. </label></div>
 
                             <br>
                             <div>
@@ -288,23 +288,16 @@ $chooseGeneSets.on('input', _.debounce(gene_set_list_change, 100));
 $chooseGeneSets.on('blur', refresh_genes);
 
 function refresh_genes() {
-    var genes = heatmap.get_genes();
-    if ('children' in genes) {
-        $chooseGenes.text(genes.leaves().filter(node => node.height === 0).map(gene => gene.data.name).join(", ") + ", ");
-        $chooseGeneSets.val(genes.descendants().filter(node => node.height === 1 && node.depth > 0).map(gs => gs.data.name).join(", ") + ", ");
-    } else {
-        $chooseGenes.text("");
-        $chooseGeneSets.val("");
-    }
+    selected_gene_sets = heatmap.rendered_gene_sets();
+    $chooseGenes.text((str = flatten(selected_gene_sets.map(gene => gene.genes)).filter(n => n).join(", ")) ? (str + ", ") : str);
+    $chooseGeneSets.val((str = selected_gene_sets.map(gene => gene.gene_set_name).filter(n => n).join(", ")) ? (str + ", ") : str);
 }
 
 function manual_gene_list_edit(e) {
 
     let flatten = (array) => [].concat.apply([], array);
 
-    genes = heatmap.get_genes();
-
-    selected_gene_sets = genes.children.map(node => {return (node.height === 0) ? {'gene_set_name':null, 'genes':[node.data.name]} : {'gene_set_name': node.data.name, 'genes': node.children.map(gene => gene.data.name)} });
+    selected_gene_sets = heatmap.rendered_gene_sets();
     old_list = flatten(selected_gene_sets.map(gs => gs.genes));
     new_list = $(this).text().split(/[^A-Za-z0-9]/).filter(n => n);
 

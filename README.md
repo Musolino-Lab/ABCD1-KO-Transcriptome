@@ -3,16 +3,9 @@
 
 
 minimum non-zero
-reorder
-
-
-remove genes / gene sets / samples / sample sets
 
 
 UI for offset
-
-
-canvas / webgl / webgl2 (deck.gl) ?
 
 
 legends
@@ -30,3 +23,5 @@ frontend router
 
 take everything out of the global scope
 
+
+canvas / webgl / webgl2 (deck.gl) ?
