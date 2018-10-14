@@ -132,14 +132,13 @@ function Heatmap(samples_by_genes_matrix, gene_sets, classes, separate_zscore_by
     svg.style('cursor', 'move');
 
     var selected_gene_sets = {}
-    var genes = [];
+    var genes = {};
     var metadata = {};
     var gene_wise = [];
     var gene_wise_indexer = {};
     var ordered_gene_wise = [];
     var sample_wise = [];
     // var sample_wise_indexer = {};
-    // var previous_gene_order = {}, previous_sample_order = {};
     var sample_to_sample_id = {};
     var x, y, x_category_y, y_category_x;
     var x_tree, y_tree, x_attr, y_attr;
@@ -194,6 +193,13 @@ function Heatmap(samples_by_genes_matrix, gene_sets, classes, separate_zscore_by
         selected_gene_sets = _.uniq(selected_gene_sets, (gs,i) => gs.gene_set_name ? gs.gene_set_name : i);  // gross, but how else do you keep all the nulls?
         keys = Object.keys(Object.values(samples_by_genes_matrix)[0]);  // genes included in matrix
 
+        var previous_gene_order = {}, previous_sample_order = {};
+        if (!reordering && ('children' in metadata || 'children' in genes)) {
+            metadata.each(node => previous_sample_order[node.data.id] = node.data.order);
+            genes.each(node => previous_gene_order[node.data.id] = node.data.order);
+            console.log('previous_sample_order',previous_sample_order);
+        }
+
         // GENES =====================
 
         genes = d3.hierarchy({
@@ -205,11 +211,11 @@ function Heatmap(samples_by_genes_matrix, gene_sets, classes, separate_zscore_by
                             return {
                                 'id': safeStr(gs.gene_set_name),
                                 'name': gs.gene_set_name,
-                                'order': i,
+                                'order': (previous_gene_order[safeStr(gs.gene_set_name)] || i),
                                 'category': 'Gene Set',
                                 'children': _.uniq(gs.genes).filter(gene => keys.includes(gene)).map((gene, j) => {
                                     gene_id = safeStr(gs.gene_set_name)+'_'+gene;
-                                    return {'gene_set':gs.gene_set_name, 'name':gene, 'id':gene_id, 'order':j}
+                                    return {'gene_set':gs.gene_set_name, 'name':gene, 'id':gene_id, 'order':(previous_gene_order[gene_id] || j)}
                                 })
                             }}
                         })
@@ -231,8 +237,10 @@ function Heatmap(samples_by_genes_matrix, gene_sets, classes, separate_zscore_by
             node.data['id'] = node.ancestors().reverse().map(d => safeStr(d.data.key)).join('-');
             node.data['name'] = node.data.key;
             if (0 < node.depth < categories.length) { node.data['category'] = categories[node.depth-1]; }
-            node.data['order'] = previous_sample_order[node.data.id] || (node.parent ? node.parent.children.indexOf(node) : 0);
+            node.data['order'] = node.data.id in previous_sample_order ? previous_sample_order[node.data.id] : (node.parent ? node.parent.children.indexOf(node) : 0);
         });
+
+        metadata.each(node => console.log(node.data.id, node.data.order));
 
         sample_to_sample_id = _.object(metadata.leaves().map(leaf => [leaf.data.name, leaf.data.id]));
 
@@ -959,10 +967,6 @@ function Heatmap(samples_by_genes_matrix, gene_sets, classes, separate_zscore_by
             refresh_genes_cb();
 
         } else if (d.ancestors().last().data.id === 'metadata') {
-            // if (!reordering) {
-            //     metadata.each(node => previous_sample_order[node.data.id] = node.data.order);
-            //     genes.each(node => previous_gene_order[node.data.id] = node.data.order);
-            // }
             d.leaves().forEach(leaf => { delete samples_by_genes_matrix[leaf.data.name] });
             restart({'selected_gene_sets_': rendered_gene_sets()});
         }
