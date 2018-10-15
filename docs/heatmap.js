@@ -38,7 +38,6 @@ function Heatmap(samples_by_genes_matrix, gene_sets, classes, separate_zscore_by
     var values = 'zscore_stddev';
     var sorting = 'complete';
     var reordering = true;
-    var minimum_nonzero = 0;
 
 
     /////////////////////////////////////////////////////////////////////////////
@@ -79,7 +78,7 @@ function Heatmap(samples_by_genes_matrix, gene_sets, classes, separate_zscore_by
     var x_axis_nodes_position = 'before';
     var x_axis_nodes_y_height = 16;
     var y_axis_style = 'genes';
-    var x_axis_style = 'metadata';
+    var x_axis_style = 'samples';
     var t = false;
     var x_categories = categories;
     var y_categories = ['Gene Set'];
@@ -98,7 +97,7 @@ function Heatmap(samples_by_genes_matrix, gene_sets, classes, separate_zscore_by
             nodes:  (nodes_position, leaves_position, this_tree, other_tree, layer_width, text_width) =>
                 (nodes_position === 'before') ? -(layer_width*this_tree.height)-10 - ((leaves_position === 'before') ? text_width : 0) : other_tree.x1 - layer_width + ((leaves_position === 'before') ? 10 : text_width),
         },
-        'metadata': {
+        'samples': {
             leaves: (nodes_position, leaves_position, this_tree, other_tree, layer_width, text_width) =>
                 (leaves_position === 'before') ? ((nodes_position === 'before') ? -(layer_width*(this_tree.height-1))-20 : -10) : other_tree.x1 + ((nodes_position === 'before') ? 10 : (layer_width*(this_tree.height-1))+20),
             nodes:  (nodes_position, leaves_position, this_tree, other_tree, layer_width, text_width) =>
@@ -133,7 +132,7 @@ function Heatmap(samples_by_genes_matrix, gene_sets, classes, separate_zscore_by
 
     var selected_gene_sets = {}
     var genes = {};
-    var metadata = {};
+    var samples = {};
     var gene_wise = [];
     var gene_wise_indexer = {};
     var ordered_gene_wise = [];
@@ -194,10 +193,9 @@ function Heatmap(samples_by_genes_matrix, gene_sets, classes, separate_zscore_by
         keys = Object.keys(Object.values(samples_by_genes_matrix)[0]);  // genes included in matrix
 
         var previous_gene_order = {}, previous_sample_order = {};
-        if (!reordering && ('children' in metadata || 'children' in genes)) {
-            metadata.each(node => previous_sample_order[node.data.id] = node.data.order);
+        if (!reordering && ('children' in samples || 'children' in genes)) {
+            samples.each(node => previous_sample_order[node.data.id] = node.data.order);
             genes.each(node => previous_gene_order[node.data.id] = node.data.order);
-            console.log('previous_sample_order',previous_sample_order);
         }
 
         // GENES =====================
@@ -223,26 +221,24 @@ function Heatmap(samples_by_genes_matrix, gene_sets, classes, separate_zscore_by
 
         if (genes.data.children.length === 0) { return clear_fig(); }
 
-        // METADATA =====================
+        // SAMPLES =====================
 
         nest = d3.nest();
         categories.forEach(category => nest.key(d => d[category]) );
-        metadata = {
-            'key':'metadata',
+        samples = {
+            'key':'samples',
             'values': nest.entries(Object.entries(classes).filter(([sample_id, metadata]) => Object.keys(samples_by_genes_matrix).includes(sample_id))
                                                           .map(([sample_id, metadata]) => Object.assign(metadata, {'key': sample_id})))
         }
-        metadata = d3.hierarchy(metadata, d => d.values)
-        metadata.each(node => {
+        samples = d3.hierarchy(samples, d => d.values)
+        samples.each(node => {
             node.data['id'] = node.ancestors().reverse().map(d => safeStr(d.data.key)).join('-');
             node.data['name'] = node.data.key;
             if (0 < node.depth < categories.length) { node.data['category'] = categories[node.depth-1]; }
             node.data['order'] = node.data.id in previous_sample_order ? previous_sample_order[node.data.id] : (node.parent ? node.parent.children.indexOf(node) : 0);
         });
 
-        metadata.each(node => console.log(node.data.id, node.data.order));
-
-        sample_to_sample_id = _.object(metadata.leaves().map(leaf => [leaf.data.name, leaf.data.id]));
+        sample_to_sample_id = _.object(samples.leaves().map(leaf => [leaf.data.name, leaf.data.id]));
 
         // SAMPLE WISE =====================
 
@@ -295,26 +291,22 @@ function Heatmap(samples_by_genes_matrix, gene_sets, classes, separate_zscore_by
 
     function order({
         values_=values,
-        sorting_=sorting,
-        minimum_nonzero_=minimum_nonzero}={}) {
+        sorting_=sorting}={}) {
 
         values = values_;
         sorting = sorting_;
-        minimum_nonzero = minimum_nonzero_;
 
-
-        ordered_gene_wise = genes.leaves().map(leaf => gene_wise[gene_wise_indexer[leaf.data.name]].map(sample => Object.assign(sample, {'gene_id':leaf.data.id})))
-                                          .filter((gene) => gene[0].num_nonzeros >= minimum_nonzero);
+        ordered_gene_wise = genes.leaves().map(leaf => gene_wise[gene_wise_indexer[leaf.data.name]].map(sample => Object.assign(sample, {'gene_id':leaf.data.id})));
 
         if (ordered_gene_wise.length === 0) { return; }  // do something smart here.
 
         if (reordering && ordered_gene_wise.length > 1) {
             reorder_leaves(genes, ordered_gene_wise, 'gene_id');
-            reorder_leaves(metadata, sample_wise, 'sample_id');
+            reorder_leaves(samples, sample_wise, 'sample_id');
         }
 
         genes.count().sort(function(a, b) { return a.depth - b.depth || a.data.order - b.data.order; });
-        metadata.count().sort(function(a, b) { return a.depth - b.depth || a.data.order - b.data.order; });
+        samples.count().sort(function(a, b) { return a.depth - b.depth || a.data.order - b.data.order; });
 
     }
 
@@ -396,7 +388,7 @@ function Heatmap(samples_by_genes_matrix, gene_sets, classes, separate_zscore_by
 
             x_tree = genes;
             x_attr = 'gene_id';
-            y_tree = metadata;
+            y_tree = samples;
             y_attr = 'sample_id';
 
             drag_y_end = (d) => drag_node_end( d, y_tree, 'y', sample_wise, ordered_gene_wise);
@@ -407,7 +399,7 @@ function Heatmap(samples_by_genes_matrix, gene_sets, classes, separate_zscore_by
             x_categories = categories;
             y_categories = (genes.height > 1 ? ['Gene Set'] : []);
 
-            x_tree = metadata;
+            x_tree = samples;
             x_attr = 'sample_id';
             y_tree = genes;
             y_attr = 'gene_id';
@@ -966,7 +958,7 @@ function Heatmap(samples_by_genes_matrix, gene_sets, classes, separate_zscore_by
             restart({'selected_gene_sets_': rendered_gene_sets().filter(gs => gs.gene_set_name !== d.data.name)});
             refresh_genes_cb();
 
-        } else if (d.ancestors().last().data.id === 'metadata') {
+        } else if (d.ancestors().last().data.id === 'samples') {
             d.leaves().forEach(leaf => { delete samples_by_genes_matrix[leaf.data.name] });
             restart({'selected_gene_sets_': rendered_gene_sets()});
         }

@@ -55,12 +55,6 @@
                             <div><input type="checkbox" id="reordering" value="reordering" checked><label for="reordering"> Reset Gene Order on each change. </label></div>
 
                             <br>
-                            <div>
-                                <label style="display: inline" for="minimum_nonzero">Only Show a Gene if at least <span id="X">0</span> samples have a non-zero value.</label>
-                                <input type="range" id="minimum_nonzero" name="" min="0" max="10" step="1" value="0" style="position: relative; top: 3px; display: inline" onchange="$('#X').text(this.value)">
-                            </div>
-
-                            <br>
                             <div id="values">
                                 <label>Show Gene Values of</label>
                                 <div class="form-check"><input class="form-check-input" type="radio" name="values" value="logcount">log₁₀ Original Counts</div>
@@ -237,8 +231,6 @@ else {
     });
 }
 
-$("#minimum_nonzero").attr('max', Object.keys(mouse_human_lee_merged_counts).length);
-
 separate_zscore_by = ['system'];
 
 
@@ -355,7 +347,6 @@ $chooseGenes.on('blur', refresh_genes);
 /////////////////////////////////////////////////////////////////////////////
 
 $("#reordering").change(           function () { heatmap.set_reordering(this.checked) });
-$("#minimum_nonzero").change(      function () { heatmap.order({'minimum_nonzero_': parseInt(this.value)}); heatmap.render(); refresh_genes(); });
 $("#values input:radio").change(   function () { heatmap.order({'values_': this.value}); heatmap.render(); refresh_genes(); });
 $("#sorting input:radio").change(  function () { heatmap.order({'sorting_': this.value}); heatmap.render(); refresh_genes(); $('#euclidian').prop('disabled', (this.value !== 'complete')); });
 

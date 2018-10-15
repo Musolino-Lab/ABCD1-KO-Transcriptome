@@ -2,9 +2,6 @@
 
 
 
-minimum non-zero
-
-
 UI for offset
 
 
