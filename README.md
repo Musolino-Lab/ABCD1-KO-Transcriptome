@@ -2,11 +2,7 @@
 
 
 
-UI for offset
-
-
 legends
-and shuffle colors for meta so they aren't redundant
 
 
 hover
@@ -22,3 +18,6 @@ take everything out of the global scope
 
 
 canvas / webgl / webgl2 (deck.gl) ?
+
+
+

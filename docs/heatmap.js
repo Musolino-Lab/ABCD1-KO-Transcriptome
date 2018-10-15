@@ -48,8 +48,10 @@ function Heatmap(samples_by_genes_matrix, gene_sets, classes, separate_zscore_by
     var middle_color = '#c0c0c0';
     var positive_color = '#cc0000';
     var show_legends = false;
+    var legends_position = 'right';
 
-    var category_colors = _.object(categories.map((category) => [category, d3.scaleOrdinal(d3.schemeCategory10)]))
+    // var category_colors = _.object(categories.map((category) => [category, d3.scaleOrdinal(d3.schemeCategory10)]))
+    var category_colors = {'system': d3.scaleOrdinal(d3.schemeCategory10), 'condition': d3.scaleOrdinal(d3.schemeSet2)};
 
     var color_style = 'interpolateTriplet'
     var colors = null;
@@ -156,6 +158,10 @@ function Heatmap(samples_by_genes_matrix, gene_sets, classes, separate_zscore_by
 
 
     var legends = g.append('g').attr('class', 'legends');
+
+    var color_legend = legends.append("g").attr("class", 'legend').style("stroke", "black").attr("font-family", "sans-serif");
+
+    var category_legends = _(category_colors).mapObject((color_scale, catg) => legends.append("g").attr("class", 'legend').style("stroke", "black").attr("font-family", "sans-serif") );
 
     var rect_resizer = g.append('circle')
                         .attr('class', 'resizer')
@@ -534,6 +540,7 @@ function Heatmap(samples_by_genes_matrix, gene_sets, classes, separate_zscore_by
             .styles(text_styles)
             .style('font-size', x_font_size)
             .on('click', (d) => (x_attr === 'gene_id' ? GeneCards(d.data.name) : null))
+            .on('mouseover', setFocus).on('mouseout', removeFocus)
             .call(d3.drag().on('drag', drag_x).on('end', drag_x_end))
             .style('opacity', 0).transition(t_last).style('opacity', 1);
 
@@ -550,6 +557,7 @@ function Heatmap(samples_by_genes_matrix, gene_sets, classes, separate_zscore_by
                 .attr('width', d => d.x1 - d.x0)
                 .attr('height', d => d.y1 - d.y0)
                 .styles(styles['nodes'][x_attr])
+                .on('mouseover', setFocus).on('mouseout', removeFocus)
             .select(function() { return this.parentNode; })
                 .append('text')
                 .attr('class', 'xtre_label')
@@ -606,6 +614,7 @@ function Heatmap(samples_by_genes_matrix, gene_sets, classes, separate_zscore_by
             .style('text-anchor', (y_axis_leaves_position === 'before' ? 'end' : 'start'))
             .attr('dy', y_font_size)
             .on('click', (d) => (y_attr === 'gene_id' ? GeneCards(d.data.name) : null))
+            .on('mouseover', setFocus).on('mouseout', removeFocus)
             .call(d3.drag().on('drag', drag_y).on('end', drag_y_end))
             .style('opacity', 0).transition(t_last).style('opacity', 1);
 
@@ -622,6 +631,7 @@ function Heatmap(samples_by_genes_matrix, gene_sets, classes, separate_zscore_by
                 .attr('width', d => d.x1 - d.x0)
                 .attr('height', d => d.y1 - d.y0)
                 .styles(styles['nodes'][y_attr])
+                .on('mouseover', setFocus).on('mouseout', removeFocus)
             .select(function() { return this.parentNode; })
                 .append('text')
                 .attr('class', 'ytre_label')
@@ -674,6 +684,7 @@ function Heatmap(samples_by_genes_matrix, gene_sets, classes, separate_zscore_by
             .attr('width', rect_width-spacing)
             .attr('height', rect_height-spacing)
             .attr('fill', d => colors(d[values]))
+            .on('mouseover', setFocus).on('mouseout', removeFocus)
             .style('opacity', 0).transition(t_last).style('opacity', 1);
 
 
@@ -699,6 +710,7 @@ function Heatmap(samples_by_genes_matrix, gene_sets, classes, separate_zscore_by
                     middle_color_=middle_color,
                     positive_color_=positive_color,
                     show_legends_=show_legends,
+                    legends_position_=legends_position,
                     show_x_level_names_=show_x_level_names,
                     show_y_level_names_=show_y_level_names,
                     rotation_=rotation}={}) {
@@ -708,6 +720,7 @@ function Heatmap(samples_by_genes_matrix, gene_sets, classes, separate_zscore_by
         middle_color = middle_color_,
         positive_color = positive_color_,
         show_legends = show_legends_;
+        legends_position = legends_position_;
         show_x_level_names = show_x_level_names_;
         show_y_level_names = show_y_level_names_;
         rotation = rotation_;
@@ -726,10 +739,26 @@ function Heatmap(samples_by_genes_matrix, gene_sets, classes, separate_zscore_by
         g.selectAll('.xtre').filter(node => node.height === 0).attr('transform', d => 'rotate('+x_axis_leaves_rotation+','+d.x0+','+x_axis_leaves_y+')');
 
         // Legends
+
+        // legends_position
+
+
         if (show_legends) {
+
+            color_legend.call(d3.legendColor().scale(colors));
+
+            Object.entries(category_legends).forEach(([catg, legend]) => {
+                legend.call(d3.legendColor().scale(category_colors[catg]))
+                      .attr("transform", "translate(0,"+(color_legend.node().getBBox().height+40)+")");
+            });
 
         } else {
 
+            color_legend.selectAll("*").remove();
+
+            Object.entries(category_legends).forEach(([catg, legend], i) => {
+                legend.selectAll("*").remove();
+            });
         }
 
     }
@@ -964,16 +993,6 @@ function Heatmap(samples_by_genes_matrix, gene_sets, classes, separate_zscore_by
         }
     }
 
-    function rendered_gene_sets() {
-        if ('children' in genes) {
-            return genes.children.map(node => {
-                if (node.height === 0) { return {'gene_set_name':null, 'genes':[node.data.name]} }
-                else { return {'gene_set_name': node.data.name, 'genes': node.children.map(gene => gene.data.name)} } });
-        } else {
-            return [];
-        }
-    }
-
 
     /////////////////////////////////////////////////////////////////////////////
                           ///////    Hover    ///////
@@ -981,9 +1000,15 @@ function Heatmap(samples_by_genes_matrix, gene_sets, classes, separate_zscore_by
 
 
     function setFocus(d) {
+
+        // console.log(d);
+
     }
 
     function removeFocus(d) {
+
+        // console.log(d);
+
     }
 
     function GeneCards(d) { window.open('http://www.genecards.org/cgi-bin/carddisp.pl?gene='+d,'_blank') }
@@ -1036,6 +1061,27 @@ function Heatmap(samples_by_genes_matrix, gene_sets, classes, separate_zscore_by
                           ///////    Return    ///////
     /////////////////////////////////////////////////////////////////////////////
 
+    function rendered_gene_sets() {
+        if ('children' in genes) {
+            return genes.children.map(node => {
+                if (node.height === 0) { return {'gene_set_name':null, 'genes':[node.data.name]} }
+                else { return {'gene_set_name': node.data.name, 'genes': node.children.map(gene => gene.data.name)} } });
+        } else {
+            return [];
+        }
+    }
+
+    function metadata_spacing(dict) {
+
+        Object.entries(dict).forEach(([catg, space]) => {
+            if (catg === 'gene_set') { margins['gene_id']['1'] = parseFloat(space); }
+            else { margins['sample_id'][categories.length - categories.indexOf(catg).toString()] = parseFloat(space); }
+        });
+
+        resize_fig();
+    }
+
+
     return {
         'restart'     : restart,
         'render'      : render,
@@ -1043,6 +1089,7 @@ function Heatmap(samples_by_genes_matrix, gene_sets, classes, separate_zscore_by
         'style'       : style,
 
         'rendered_gene_sets': rendered_gene_sets,
+        'spacing'     : metadata_spacing,
 
         transpose     : function() { t = !t; [rect_width, rect_height] = [rect_height, rect_width]; [y_axis_style, x_axis_style] = [x_axis_style, y_axis_style]; render(); },
         set_reordering: function(reordering_) { reordering = reordering_; if (reordering) { order(); render(); } },
