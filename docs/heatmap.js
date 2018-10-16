@@ -1107,9 +1107,9 @@ function Heatmap(samples_by_genes_matrix, gene_sets, classes, separate_zscore_by
             current_transform.k = clamp(0.1, 5)(current_transform.k - d3.event.deltaY * 0.01);
         } else {
             if (t) {
-                current_transform.x = clamp(-(x_tree.x1-100), w)(current_transform.x - d3.event.deltaY);
+                current_transform.x = clamp(-(x_tree.x1-100)*current_transform.k, w)(current_transform.x - d3.event.deltaY);
             } else {
-                current_transform.y = clamp(-(y_tree.x1-100), h)(current_transform.y - d3.event.deltaY);
+                current_transform.y = clamp(-(y_tree.x1-100)*current_transform.k, h)(current_transform.y - d3.event.deltaY);
             }
         }
         g.attr('transform', current_transform);
