@@ -89,7 +89,7 @@ input[type="range"] {
     position: relative;
     top: 3px;
 }
-input[type="radio"][disabled] + label {
+input[disabled] + label {
     opacity: 0.3;
 
 }

@@ -55,14 +55,8 @@
                             <div><input type="checkbox" id="reordering" value="reordering" checked><label for="reordering"> Reset Gene Order on each change. </label></div>
 
                             <br>
-                            <div>
-                                <label style="display: inline" for="minimum_nonzero">Only Show a Gene if at least <span id="X">0</span> samples have a non-zero value.</label>
-                                <input type="range" id="minimum_nonzero" name="" min="0" max="10" step="1" value="0" style="position: relative; top: 3px; display: inline" onchange="$('#X').text(this.value)">
-                            </div>
-
-                            <br>
                             <div id="values">
-                                <label>Show Gene Values of</label>
+                                <b><label>Show Gene Values of</label></b>
                                 <div class="form-check"><input class="form-check-input" type="radio" name="values" value="logcount">log₁₀ Original Counts</div>
                                 <div class="form-check"><input class="form-check-input" type="radio" name="values" value="zscore_stddev" checked> Z-Scores (Standard Deviations)</div>
                                 <div class="form-check"><input class="form-check-input" type="radio" name="values" value="zscore_mad"> Z-Scores (Mean Absolute Deviation)</div>
@@ -70,7 +64,7 @@
 
                             <br>
                             <div id="sorting">
-                                <label>Sort Genes by</label>
+                                <b><label>Sort Genes by</label></b>
                                 <div class="form-check"><input class="form-check-input" type="radio" name="sorting" value="complete" checked> Complete-Linkage Hierarchical Clustering and Optimal Leaf Ordering</div>
                                 <div id="distance" class="ml-3">
                                     <label>Measure distance by</label>
@@ -82,26 +76,53 @@
                                 </div>
                                 <div class="form-check"><input class="form-check-input" type="radio" name="sorting" value="pc1"> Principal Component 1 of genes in sample space</div>
                             </div>
+
+                            <br>
+                            <label>Use the Backspace key to remove samples, groups, genes, and gene sets.</label>
+
+
                         </div>
 
                         <div class="tab-pane card-body fade" id="style" role="tabpanel">
+                            <b><label>Legends</label></b>
+                            <div><input type="checkbox" id="show_sample_metadata" value="show_sample_metadata" checked><label> Show Sample Metadata Text </label></div>
                             <div><input type="checkbox" id="show_legends" value="show_legends"><label> Show legends </label></div>
+                            <div id="leg_pos">
+                                <label>Legends Position</label><br>
+                                <div class="form-check" style="display: inline; margin-right: 5px;"><input class="form-check-input" type="radio" name="legends_position" id="legend_left" value="left" disabled><label>Left</label></div>
+                                <div class="form-check" style="display: inline; margin-right: 5px;"><input class="form-check-input" type="radio" name="legends_position" id="legend_right" value="right" checked disabled><label>Right</label></div>
+                                <div class="form-check" style="display: inline; margin-right: 5px;"><input class="form-check-input" type="radio" name="legends_position" id="legend_above" value="above" disabled><label>Above</label></div>
+                                <div class="form-check" style="display: inline; margin-right: 5px;"><input class="form-check-input" type="radio" name="legends_position" id="legend_below" value="below" disabled><label>Below</label></div>
+                            </div>
+                            <div><input type="checkbox" id="darker_legends" value="darker_legends" disabled><label> Boldface Legends </label></div>
+
 
                             <br>
                             <div id="colors">
-                                <label>Cell Colors</label>
+                                <b><label>Cell Colors</label></b>
                                 <div class="form-check"><input class="form-check-input" type="radio" name="colors" id="Triplet" value="interpolateTriplet" checked> along <input type="color" value="#0000cc" id="negative_color"> <input type="color" value="#c0c0c0" id="middle_color"> <input type="color" value="#cc0000" id="positive_color"></div>
                                 <div class="form-check"><input class="form-check-input" type="radio" name="colors" id="Viridis" value="interpolateViridis"> Viridis</div>
                                 <div class="form-check"><input class="form-check-input" type="radio" name="colors" id="Magma" value="interpolateMagma"> Magma</div>
                             </div>
 
                             <br>
+                            <b><label>Spacing</label></b>
                             <div>
-                                <label style="display: inline" for="spacing">Spacing</label>
-                                <input type="range" id="spacing" name="spacing" min="0" max="2" step="0.01" value="1" style="position: relative; top: 3px; display: inline">
+                                <label for="cell_spacing">Cell Spacing</label>
+                                <input type="range" id="cell_spacing" name="cell_spacing" min="0" max="2" step="0.01" value="1" style="position: relative; top: 3px; display: inline">
+                            </div>
+                            <div>
+                                <label for="gene_set_spacing">Gene Set Spacing</label>
+                                <input type="range" id="gene_set_spacing" name="gene_set_spacing" min="0" max="40" step="1" value="10" style="position: relative; top: 3px; display: inline">
+                            </div>
+                            <div>
+                                <label for="metadata_spacing">Metadata Spacing</label><br>
+                                <select class="category" id="category_spacing" onchange="$('#metadata_spacing').val(metadata_spacing[this.value])"></select>
+                                <input type="range" id="metadata_spacing" name="metadata_spacing" min="0" max="40" step="1" value="0" style="position: relative; top: 3px; display: inline">
                             </div>
 
                             <br>
+                            <b><label>Positions</label></b>
                             <div id="x_labels">
                                 <label>X-Axis Labels</label>
                                 <div class="form-check form-check-inline"><input class="form-check-input" type="radio" name="x_labels" id="before" value="before"> before</div>
@@ -145,9 +166,14 @@
                             </div>
                             <div><input type="checkbox" id="show_y_level_names" value="show_y_level_names" checked><label> Show Y-Axis level names </label></div>
 
-
                             <br>
                             <button type="button" class="btn btn-outline-secondary btn-sm" id="transpose">Transpose</button>
+
+                            <br>
+                            <br>
+                            <label>Drag the corners of the heatmap to resize.</label>
+                            <br>
+                            <label>Drag items to change their order.</label>
 
                         </div>
 
@@ -197,11 +223,11 @@ function uniques(a1, i1, a2, i2) {
     else if (a1[i1] === a2[i2]) { return uniques(a1, i1+1, a2, i2+1); }
 
     else {
-        distance_in_a1_to_a2_head = distance_to_x_from_i_in_a(a1, a2[i2], i1);
-        distance_in_a2_to_a1_head = distance_to_x_from_i_in_a(a2, a1[i1], i2);
+        var distance_in_a1_to_a2_head = distance_to_x_from_i_in_a(a1, a2[i2], i1);
+        var distance_in_a2_to_a1_head = distance_to_x_from_i_in_a(a2, a1[i1], i2);
 
-        a1_head_exists_in_a2 = distance_in_a2_to_a1_head > 0;
-        a2_head_exists_in_a1 = distance_in_a1_to_a2_head > 0;
+        var a1_head_exists_in_a2 = distance_in_a2_to_a1_head > 0;
+        var a2_head_exists_in_a1 = distance_in_a1_to_a2_head > 0;
 
         if (!a1_head_exists_in_a2 && !a2_head_exists_in_a1) { return [[{[''+i1]:a1[i1]}, {[''+i2]:a2[i2]}]].concat(uniques(a1, i1+1, a2, i2+1)); }
 
@@ -229,7 +255,7 @@ let uniqs = (a, b) => uniques(a, 0, b, 0).reduce((acc, [from_a1, from_a2]) => [O
 /////////////////////////////////////////////////////////////////////////////
 
 
-class_categories = _.uniq(_.flatten(Object.values(mouse_human_lee_merged_classes).map(obj => Object.keys(obj))));
+var class_categories = _.uniq(_.flatten(Object.values(mouse_human_lee_merged_classes).map(obj => Object.keys(obj))));
 if (class_categories.length === 0) { $(".form-check-input[value='class']").remove(); }
 else {
     class_categories.forEach(function(key) {
@@ -237,12 +263,15 @@ else {
     });
 }
 
-$("#minimum_nonzero").attr('max', Object.keys(mouse_human_lee_merged_counts).length);
+var metadata_spacing = _.object(class_categories.map(category => [category, 0]));
+metadata_spacing['system'] = 10;
+$('#metadata_spacing').val(metadata_spacing[$('#category_spacing').val()]);
 
-separate_zscore_by = ['system'];
+
+var separate_zscore_by = ['system'];
 
 
-heatmap = Heatmap(mouse_human_lee_merged_counts, human_gene_sets, mouse_human_lee_merged_classes, separate_zscore_by, refresh_genes);
+var heatmap = Heatmap(mouse_human_lee_merged_counts, human_gene_sets, mouse_human_lee_merged_classes, separate_zscore_by, refresh_genes);
 
 
 
@@ -250,9 +279,9 @@ heatmap = Heatmap(mouse_human_lee_merged_counts, human_gene_sets, mouse_human_le
              ///////    Select Gene Set / Genes   ///////
 /////////////////////////////////////////////////////////////////////////////
 
-$chooseGenes = $('#chooseGenes');
-$chooseGeneSets = $('#chooseGeneSets');
-selected_gene_sets = [];
+var $chooseGenes = $('#chooseGenes');
+var $chooseGeneSets = $('#chooseGeneSets');
+var selected_gene_sets = [];
 
 var chooseGeneSets = document.getElementById("chooseGeneSets");
 var chooseGeneSetsform = new Awesomplete(chooseGeneSets, {
@@ -268,17 +297,17 @@ var chooseGeneSetsform = new Awesomplete(chooseGeneSets, {
 });
 
 chooseGeneSets.addEventListener('awesomplete-selectcomplete', function(e) {
-    selected_gene_set_name = e.text.label;
-    selected_genes = e.text.value;
-    selected_gene_set = {'gene_set_name':selected_gene_set_name, 'genes':selected_genes};
+    var selected_gene_set_name = e.text.label;
+    var selected_genes = e.text.value;
+    var selected_gene_set = {'gene_set_name':selected_gene_set_name, 'genes':selected_genes};
     selected_gene_sets.push(selected_gene_set);
     heatmap.restart({'selected_gene_sets_':selected_gene_sets});
     // window.location.hash = selected_gene_sets.map(gs => gs.gene_set_name).join(',')
 });
 
 function gene_set_list_change(e) {
-    keys = this.value.split(',').map(s => s.trim()).filter(s => s);
-    filtered_selected_gene_sets = selected_gene_sets.filter(gs => gs.gene_set_name === null || keys.includes(gs.gene_set_name));
+    var keys = this.value.split(',').map(s => s.trim()).filter(s => s);
+    var filtered_selected_gene_sets = selected_gene_sets.filter(gs => gs.gene_set_name === null || keys.includes(gs.gene_set_name));
     if (!_.isEqual(selected_gene_sets, filtered_selected_gene_sets)) {
         selected_gene_sets = filtered_selected_gene_sets;
         heatmap.restart({'selected_gene_sets_':selected_gene_sets});
@@ -298,15 +327,15 @@ function manual_gene_list_edit(e) {
     let flatten = (array) => [].concat.apply([], array);
 
     selected_gene_sets = heatmap.rendered_gene_sets();
-    old_list = flatten(selected_gene_sets.map(gs => gs.genes));
-    new_list = $(this).text().split(/[^A-Za-z0-9]/).filter(n => n);
+    var old_list = flatten(selected_gene_sets.map(gs => gs.genes));
+    var new_list = $(this).text().split(/[^A-Za-z0-9]/).filter(n => n);
 
     [removed, added] = uniqs(old_list, new_list);
 
     if (Object.keys(removed).length > 0 || Object.keys(added).length > 0) {
 
         // walk backwards through selected_gene_sets
-        removed_indices = Object.keys(removed).map(s => parseInt(s));
+        var removed_indices = Object.keys(removed).map(s => parseInt(s));
 
         var i = old_list.length-1;
         for (var gs_i = selected_gene_sets.length-1; gs_i >= 0; gs_i--) {
@@ -320,7 +349,7 @@ function manual_gene_list_edit(e) {
             }
         }
 
-        added_indices = Object.keys(added).map(s => parseInt(s));
+        var added_indices = Object.keys(added).map(s => parseInt(s));
 
         var gs_i = 0;
         var g_i = 0;
@@ -348,23 +377,26 @@ function manual_gene_list_edit(e) {
 $chooseGenes.on('input', _.debounce(manual_gene_list_edit, 100));
 $chooseGenes.on('blur', refresh_genes);
 
-// d3.on("drag", refresh_genes());
-
 /////////////////////////////////////////////////////////////////////////////
                  ///////    Style Figure    ///////
 /////////////////////////////////////////////////////////////////////////////
 
 $("#reordering").change(           function () { heatmap.set_reordering(this.checked) });
-$("#minimum_nonzero").change(      function () { heatmap.order({'minimum_nonzero_': parseInt(this.value)}); heatmap.render(); refresh_genes(); });
 $("#values input:radio").change(   function () { heatmap.order({'values_': this.value}); heatmap.render(); refresh_genes(); });
 $("#sorting input:radio").change(  function () { heatmap.order({'sorting_': this.value}); heatmap.render(); refresh_genes(); $('#euclidian').prop('disabled', (this.value !== 'complete')); });
 
-$("#show_legends").change(         function () { heatmap.style({'show_legends_': this.checked}) });
+$("#show_sample_metadata").change( function () { heatmap.style({'show_sample_metadata_': this.checked}); });
+$("#show_legends").change(         function () { heatmap.style({'show_legends_': this.checked}); $('#leg_pos input:radio, #darker_legends').prop('disabled', !this.checked); });
+$("#leg_pos input:radio").change(  function () { heatmap.style({'legends_position_': this.value}) });
+$("#darker_legends").change(       function () { heatmap.style({'darker_legends_': this.checked}) });
 $("#colors input:radio").change(   function () { heatmap.style({'color_style_': this.value}); });
 $("#negative_color").change(       function () { heatmap.style({'negative_color_': this.value}) });
 $("#middle_color").change(         function () { heatmap.style({'middle_color_': this.value}) });
 $("#positive_color").change(       function () { heatmap.style({'positive_color_': this.value}) });
-$("#spacing").change(              function () { heatmap.render({'spacing_': parseFloat(this.value)}); });
+$("#cell_spacing").change(         function () { heatmap.render({'spacing_': parseFloat(this.value)}); });
+$("#gene_set_spacing").change(     function () { heatmap.spacing({'gene_set': this.value}) });
+$("#metadata_spacing").change(     function () { metadata_spacing[$("#category_spacing").val()] = this.value;
+                                                 heatmap.spacing({[$("#category_spacing").val()]: this.value}); });
 
 $("#x_labels input:radio").change( function () { heatmap.render({'x_axis_leaves_position_': this.value}); });
 $("#x_meta input:radio").change(   function () { heatmap.render({'x_axis_nodes_position_': this.value}); });
