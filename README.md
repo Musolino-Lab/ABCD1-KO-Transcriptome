@@ -2,9 +2,6 @@
 
 
 
-take everything out of the global scope
-
-
 drag catg better
 
 
