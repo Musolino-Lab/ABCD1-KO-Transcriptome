@@ -203,7 +203,7 @@ function Heatmap(samples_by_genes_matrix, gene_sets, classes, separate_zscore_by
         if (Object.keys(samples_by_genes_matrix).length === 0) { return clear_fig(); }
 
         selected_gene_sets = selected_gene_sets_;
-        selected_gene_sets = _.uniq(selected_gene_sets, (gs,i) => gs.gene_set_name ? gs.gene_set_name : i);  // gross ternary, but how else do you keep all the nulls?
+        selected_gene_sets = _.uniq(selected_gene_sets, (gs,i) => gs.gene_set_name ? gs.gene_set_name : gs.genes[0]);
         measured_genes = Object.keys(Object.values(samples_by_genes_matrix)[0]);  // genes included in matrix
 
         var previous_gene_order = {}, previous_sample_order = {};
@@ -264,7 +264,7 @@ function Heatmap(samples_by_genes_matrix, gene_sets, classes, separate_zscore_by
                 'sample'    : sample,
                 'sample_id' : sample_to_sample_id[sample],
                 'gene'      : gene,
-                'gene_id'   : null,  // assigned later
+                // 'gene_id' assigned later
                 'count'     : count,
                 'logcount'  : Math.log10(count+1),
             }})
@@ -312,7 +312,7 @@ function Heatmap(samples_by_genes_matrix, gene_sets, classes, separate_zscore_by
 
         if (gene_wise.length === 0) { return; }  // do something smart here.
 
-        ordered_gene_wise = genes.leaves().map(leaf => gene_wise[gene_wise_indexer[leaf.data.name]].map(sample => Object.assign(sample, {'gene_id':leaf.data.id})));
+        ordered_gene_wise = genes.leaves().map(leaf => gene_wise[gene_wise_indexer[leaf.data.name]].map(sample => Object.assign({'gene_id':leaf.data.id}, sample)));
 
         if (ordered_gene_wise.length === 0) { return; }  // do something smart here.
 
@@ -479,12 +479,10 @@ function Heatmap(samples_by_genes_matrix, gene_sets, classes, separate_zscore_by
         x_axis_nodes_position = x_axis_nodes_position_;
         x_axis_style = x_axis_style_;
 
-        if (ordered_gene_wise.length === 0) { return; }
+        if (ordered_gene_wise.length === 0) { return clear_fig(); }
 
         position();
         set_colors();
-
-        if (ordered_gene_wise.length === 0) { return clear_fig(); }
 
         rect = g.selectAll('.rect').data(flatten(ordered_gene_wise), d => d.id);
         ytre = g.selectAll('.ytre').data(y_tree.descendants(), d => d.data.id);
@@ -494,8 +492,9 @@ function Heatmap(samples_by_genes_matrix, gene_sets, classes, separate_zscore_by
 
         // phase 1
             // rectangles which are exiting fade out
-            // gene names which are exiting fade out
-            // gene groups which are exiting fade out
+            // gene names / groups which are exiting fade out
+            // sample names / groups which are exiting fade out
+            // gene / sample x names / groups which are staying get full opacity
         t_last = d3.transition().duration(500);
         if (rect.exit().size() > 0 || ytre.exit().size() > 0 || xtre.exit().size() > 0 || xcat.exit().size() > 0 || ycat.exit().size() > 0) {
             rect.exit().transition(t_last).style('opacity', 0).remove();
@@ -503,6 +502,9 @@ function Heatmap(samples_by_genes_matrix, gene_sets, classes, separate_zscore_by
             xtre.exit().transition(t_last).style('opacity', 0).remove();
             ycat.exit().transition(t_last).style('opacity', 0).remove();
             xcat.exit().transition(t_last).style('opacity', 0).remove();
+            rect.transition(t_last).style('opacity', 1);
+            ytre.transition(t_last).style('opacity', 1);
+            xtre.transition(t_last).style('opacity', 1);
             t_last = t_last.transition().duration(500);
         }
 
@@ -1011,24 +1013,6 @@ function Heatmap(samples_by_genes_matrix, gene_sets, classes, separate_zscore_by
         });
     }
 
-    d3.select("body").on("keydown", () => { if ((d3.event.keyCode === 8 || d3.event.keyCode === 46) && focused_node) { remove_node(); }});
-
-    function remove_node() {
-
-        if (focused_node.ancestors().last().data.id === 'genes') {
-            restart({'selected_gene_sets_': rendered_gene_sets().filter(gs => gs.gene_set_name !== focused_node.data.name)});
-            // need to be able to delete individual genes or samples now
-            refresh_genes_cb();
-
-        } else if (focused_node.ancestors().last().data.id === 'samples') {
-            focused_node.leaves().forEach(leaf => { delete samples_by_genes_matrix[leaf.data.name] });
-            restart({'selected_gene_sets_': rendered_gene_sets()});
-            // restart(); I should be able to switch to this.
-        }
-
-        removeFocus();
-    }
-
     function drag_legend(d) {
         d3.select(this).attr('transform', 'translate('+d3.event.x+','+d3.event.y+')')
     }
@@ -1069,6 +1053,31 @@ function Heatmap(samples_by_genes_matrix, gene_sets, classes, separate_zscore_by
         g.selectAll('.xtre,.ytre,.rect').style('opacity', 1);
         focused_node = null;
     }
+
+    function remove_node() {
+
+        if (focused_node.ancestors().last().data.id === 'genes') {
+
+            restart({'selected_gene_sets_': flatten(genes.children.map(node => {
+                if (node.height === 0) {
+                    if (node.data.id === focused_node.data.id) { return {}; }
+                    else { return {'gene_set_name':null, 'genes':[node.data.name]} }
+                } else {
+                    if (node.children.map(gene => gene.data.id).includes(focused_node.data.id)) { return node.children.filter(gene => gene.data.id !== focused_node.data.id).map(gene => { return {'gene_set_name':null, 'genes':[gene.data.name]} }) }
+                    else if (node.data.id === focused_node.data.id) { return {}; }
+                    else { return {'gene_set_name': node.data.name, 'genes': node.children.map(gene => gene.data.name)} }
+                }
+            })).filter(obj => Object.keys(obj).length)});
+
+            refresh_genes_cb();
+
+        } else if (focused_node.ancestors().last().data.id === 'samples') {
+            focused_node.leaves().forEach(leaf => { delete samples_by_genes_matrix[leaf.data.name] });
+            restart();
+        }
+    }
+
+    d3.select("body").on("keydown", () => { if ((d3.event.keyCode === 8 || d3.event.keyCode === 46) && focused_node) { remove_node(); }});  // ideally we would also make sure the svg is focused
 
     function GeneCards(d) { window.open('http://www.genecards.org/cgi-bin/carddisp.pl?gene='+d,'_blank') }
 
