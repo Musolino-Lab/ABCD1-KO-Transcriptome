@@ -47,8 +47,11 @@ function Heatmap(samples_by_genes_matrix, gene_sets, classes, separate_zscore_by
     var negative_color = '#0000cc';
     var middle_color = '#c0c0c0';
     var positive_color = '#cc0000';
+
+    var show_sample_metadata = true;
     var show_legends = false;
     var legends_position = 'right';
+    var darker_legends = false;
 
     // var category_colors = _.object(categories.map((category) => [category, d3.scaleOrdinal(d3.schemeCategory10)]))
     var category_colors = {'system': d3.scaleOrdinal(d3.schemeCategory10), 'condition': d3.scaleOrdinal(d3.schemeSet2)};
@@ -157,11 +160,11 @@ function Heatmap(samples_by_genes_matrix, gene_sets, classes, separate_zscore_by
     var drag_xcat_end = (d) => drag_catg_end( d, 'x');
 
 
-    var legends = g.append('g').attr('class', 'legends').call(d3.drag().on('drag', drag_legends)).style('cursor', 'all-scroll').attr('fill', 'black');
+    var legends = g.append('g').attr('class', 'legends');
 
-    var color_legend = legends.append("g").attr("class", 'legend').styles(text_styles).style('font-size', 14);
+    var color_legend = legends.append('g').attr('class', 'legend').styles(text_styles).style('font-size', 14).call(d3.drag().on('drag', drag_legend));
 
-    var category_legends = _(category_colors).mapObject((color_scale, catg) => legends.append("g").attr("class", 'legend').styles(text_styles).style('font-size', 14) );
+    var category_legends = _(category_colors).mapObject((color_scale, catg) => legends.append('g').attr('class', 'legend').styles(text_styles).style('font-size', 14).call(d3.drag().on('drag', drag_legend)) );
 
     var rect_resizer = g.append('circle')
                         .attr('class', 'resizer')
@@ -504,7 +507,6 @@ function Heatmap(samples_by_genes_matrix, gene_sets, classes, separate_zscore_by
                                                                  .attr('dy', y_font_size);
         ytre.filter(node => node.depth > 0 && node.height > 0).transition(t_last).attr('transform', d => 'translate('+(y_axis_nodes_x + d.y0)+','+d.x1+')rotate(-90)');
         ytre.filter(node => node.depth > 0 && node.height > 0).select('.ytre_box').transition(t_last).attr('width', d => d.x1 - d.x0).attr('height', d => d.y1 - d.y0).style('stroke-dasharray', d => (y_axis_nodes_position === 'before' ? pointing_right(d) : pointing_left(d)));
-        ytre.filter(node => node.depth > 0 && node.height > 0).select('.ytre_clear').transition(t_last).attr('x', d => d.x1 - d.x0 - y_axis_nodes_x_width).attr('height', y_axis_nodes_x_width).attr('width', y_axis_nodes_x_width);
         ycat.transition(t_last).attr('y', x_axis_leaves_y).attr('x', d => y_category_x[d]).attr('dy', (x_axis_leaves_position === 'before' ? y_cat_font_size : 0))
                                .attr('transform', d => 'rotate('+x_axis_leaves_rotation+','+y_category_x[d]+','+x_axis_leaves_y+')');
         t_last = t_last.transition().duration(500);
@@ -521,7 +523,6 @@ function Heatmap(samples_by_genes_matrix, gene_sets, classes, separate_zscore_by
                                                                  .attr('dy', (x_axis_leaves_position === 'before' ? x_font_size : 0));
         xtre.filter(node => node.depth > 0 && node.height > 0).transition(t_last).attr('transform', d => 'translate('+d.x0+','+(x_axis_nodes_y + d.y0)+')');
         xtre.filter(node => node.depth > 0 && node.height > 0).select('.xtre_box').transition(t_last).attr('width', d => d.x1 - d.x0).attr('height', d => d.y1 - d.y0).style('stroke-dasharray', d => (x_axis_nodes_position === 'before' ? pointing_right(d) : pointing_left(d)));
-        xtre.filter(node => node.depth > 0 && node.height > 0).select('.xtre_clear').transition(t_last).attr('x', d => d.x1 - d.x0 - x_axis_nodes_y_height).attr('height', x_axis_nodes_y_height).attr('width', x_axis_nodes_y_height);
         xcat.transition(t_last).attr('x', y_axis_leaves_x).attr('y', d => x_category_y[d]).style('text-anchor', (y_axis_leaves_position === 'before' ? 'end' : 'start'));
         t_last = t_last.transition().duration(500);
 
@@ -569,22 +570,13 @@ function Heatmap(samples_by_genes_matrix, gene_sets, classes, separate_zscore_by
                 .style('font-size', xtre_label_font_size)
                 .attr('dy', xtre_label_font_size+spacing)
                 .attr('dx', '0.2em')
+                .attr('visibility', (x_attr !== 'sample_id' || show_sample_metadata) ? 'visible' : 'hidden')
             .select(function() { return this.parentNode; })
                 .append('clipPath')
                 .attr('id', d => 'clip-'+d.data.id)
                     .append('use')
                     .attr('xlink:href', d => '#rect-'+d.data.id)
                 .select(function() { return this.parentNode; })
-            .select(function() { return this.parentNode; })
-                .append('rect')
-                .attr('class', 'xtre_clear')
-                .attr('id', d => 'clear-' + d.data.id)
-                .attr('x', d => d.x1 - d.x0 - x_axis_nodes_y_height)
-                .attr('height', d => x_axis_nodes_y_height)
-                .attr('width', d => x_axis_nodes_y_height)
-                .styles(clear_styles)
-                .on('mouseover', function() { d3.select(this).style('opacity', 1)}).on('mouseout', function() { d3.select(this).style('opacity', 0)})
-                .on('click', remove_node)
             .select(function() { return this.parentNode; })
             .style('opacity', 0).transition(t_last).style('opacity', 1);
 
@@ -643,22 +635,13 @@ function Heatmap(samples_by_genes_matrix, gene_sets, classes, separate_zscore_by
                 .style('font-size', ytre_label_font_size)
                 .attr('dy', ytre_label_font_size+spacing)
                 .attr('dx', '0.2em')
+                .attr('visibility', (y_attr !== 'sample_id' || show_sample_metadata) ? 'visible' : 'hidden')
             .select(function() { return this.parentNode; })
                 .append('clipPath')
                 .attr('id', d => 'clip-'+d.data.id)
                     .append('use')
                     .attr('xlink:href', d => '#rect-'+d.data.id)
                 .select(function() { return this.parentNode; })
-            .select(function() { return this.parentNode; })
-                .append('rect')
-                .attr('class', 'ytre_clear')
-                .attr('id', d => 'clear-' + d.data.id)
-                .attr('x', d => d.x1 - d.x0 - y_axis_nodes_x_width)
-                .attr('height', d => y_axis_nodes_x_width)
-                .attr('width', d => y_axis_nodes_x_width)
-                .styles(clear_styles)
-                .on('mouseover', function() { d3.select(this).style('opacity', 1)}).on('mouseout', function() { d3.select(this).style('opacity', 0)})
-                .on('click', remove_node)
             .select(function() { return this.parentNode; })
             .style('opacity', 0).transition(t_last).style('opacity', 1);
 
@@ -710,8 +693,10 @@ function Heatmap(samples_by_genes_matrix, gene_sets, classes, separate_zscore_by
                     negative_color_=negative_color,
                     middle_color_=middle_color,
                     positive_color_=positive_color,
+                    show_sample_metadata_=show_sample_metadata,
                     show_legends_=show_legends,
                     legends_position_=legends_position,
+                    darker_legends_=darker_legends,
                     show_x_level_names_=show_x_level_names,
                     show_y_level_names_=show_y_level_names,
                     rotation_=rotation}={}) {
@@ -720,8 +705,10 @@ function Heatmap(samples_by_genes_matrix, gene_sets, classes, separate_zscore_by
         negative_color = negative_color_,
         middle_color = middle_color_,
         positive_color = positive_color_,
+        show_sample_metadata = show_sample_metadata_;
         show_legends = show_legends_;
         legends_position = legends_position_;
+        darker_legends = darker_legends_;
         show_x_level_names = show_x_level_names_;
         show_y_level_names = show_y_level_names_;
         rotation = rotation_;
@@ -739,6 +726,8 @@ function Heatmap(samples_by_genes_matrix, gene_sets, classes, separate_zscore_by
 
         g.selectAll('.xtre').filter(node => node.height === 0).attr('transform', d => 'rotate('+x_axis_leaves_rotation+','+d.x0+','+x_axis_leaves_y+')');
 
+        g.selectAll(y_attr === 'sample_id' ? '.ytre_label' : '.xtre_label').attr('visibility', show_sample_metadata ? 'visible' : 'hidden');
+
         // Legends
 
         if (show_legends) {
@@ -747,10 +736,10 @@ function Heatmap(samples_by_genes_matrix, gene_sets, classes, separate_zscore_by
 
         } else {
 
-            color_legend.selectAll("*").remove();
+            color_legend.selectAll('*').remove();
 
             Object.entries(category_legends).forEach(([catg, legend], i) => {
-                legend.selectAll("*").remove();
+                legend.selectAll('*').remove();
             });
         }
 
@@ -760,7 +749,7 @@ function Heatmap(samples_by_genes_matrix, gene_sets, classes, separate_zscore_by
 
         if (!transition) { transition = d3.transition().duration(0); }
 
-        color_legend.call(d3.legendColor().scale(colors).title(values));
+        color_legend.call(d3.legendColor().scale(colors).title(values)).attr('transform', 'translate(0,0)');
 
         if      (legends_position === 'left' || legends_position === 'right') { size_attr = 'height'; }
         else if (legends_position === 'above' || legends_position === 'below') { size_attr = 'width'; }
@@ -768,7 +757,7 @@ function Heatmap(samples_by_genes_matrix, gene_sets, classes, separate_zscore_by
 
         Object.entries(category_legends).forEach(([catg, legend]) => {
             legend.call(d3.legendColor().scale(category_colors[catg]).title(catg))
-                  .attr("transform", "translate("+(size_attr === 'width' ? next_legend_pos+20 : 0)+","+(size_attr === 'height' ? next_legend_pos+20 : 0)+")");
+                  .attr('transform', 'translate('+(size_attr === 'width' ? next_legend_pos+20 : 0)+','+(size_attr === 'height' ? next_legend_pos+20 : 0)+')');
             next_legend_pos += legend.node().getBBox()[size_attr]+20;
         });
 
@@ -783,10 +772,12 @@ function Heatmap(samples_by_genes_matrix, gene_sets, classes, separate_zscore_by
         if (x_axis_leaves_position === 'after') { bottom += text_max_width(x_tree, x_font_size); } else { top -= text_max_width(x_tree, x_font_size); }
         if (x_axis_nodes_position === 'after') { bottom += x_tree.height * x_axis_nodes_y_height; } else { top -= x_tree.height * x_axis_nodes_y_height; }
 
-        if      (legends_position === 'right') { legends.transition(transition).attr("transform", "translate("+(furthest_right+40)+","+top+")"); }
-        else if (legends_position === 'left')  { legends.transition(transition).attr("transform", "translate("+(furthest_left-max_legend_size)+","+top+")"); }
-        else if (legends_position === 'above') { legends.transition(transition).attr("transform", "translate(0,"+(top-max_legend_size)+")"); }
-        else if (legends_position === 'below') { legends.transition(transition).attr("transform", "translate(0,"+(bottom+40)+")"); }
+        if      (legends_position === 'right') { legends.transition(transition).attr('transform', 'translate('+(furthest_right+40)+','+top+')'); }
+        else if (legends_position === 'left')  { legends.transition(transition).attr('transform', 'translate('+(furthest_left-max_legend_size)+','+top+')'); }
+        else if (legends_position === 'above') { legends.transition(transition).attr('transform', 'translate(0,'+(top-max_legend_size)+')'); }
+        else if (legends_position === 'below') { legends.transition(transition).attr('transform', 'translate(0,'+(bottom+40)+')'); }
+
+        g.selectAll('.legend').style('stroke', darker_legends ? 'black' : 'none')
 
     }
 
@@ -821,7 +812,6 @@ function Heatmap(samples_by_genes_matrix, gene_sets, classes, separate_zscore_by
         ytre.filter(node => node.depth > 0 && node.height > 0).attr('transform', d => 'translate('+(y_axis_nodes_x + d.y0)+','+d.x1+')rotate(-90)')
         ytre.filter(node => node.depth > 0 && node.height > 0).select('.ytre_box').attr('width', d => d.x1 - d.x0).attr('height', d => d.y1 - d.y0).style('stroke-dasharray', d => (y_axis_nodes_position === 'before' ? pointing_right(d) : pointing_left(d)));
         ytre.filter(node => node.depth > 0 && node.height > 0).select('.ytre_label').style('font-size', ytre_label_font_size).attr('dy', ytre_label_font_size+spacing);
-        ytre.filter(node => node.depth > 0 && node.height > 0).select('.ytre_clear').attr('x', d => d.x1 - d.x0 - y_axis_nodes_x_width).attr('height', y_axis_nodes_x_width).attr('width', y_axis_nodes_x_width);
         ycat.attr('y', x_axis_leaves_y)
             .attr('x', d => y_category_x[d])
             .attr('transform', d => 'rotate('+x_axis_leaves_rotation+','+y_category_x[d]+','+x_axis_leaves_y+')')
@@ -836,7 +826,6 @@ function Heatmap(samples_by_genes_matrix, gene_sets, classes, separate_zscore_by
         xtre.filter(node => node.depth > 0 && node.height > 0).attr('transform', d => 'translate('+d.x0+','+(x_axis_nodes_y + d.y0)+')');
         xtre.filter(node => node.depth > 0 && node.height > 0).select('.xtre_box').attr('width', d => d.x1 - d.x0).attr('height', d => d.y1 - d.y0).style('stroke-dasharray', d => (y_axis_nodes_position === 'before' ? pointing_right(d) : pointing_left(d)));
         xtre.filter(node => node.depth > 0 && node.height > 0).select('.xtre_label').style('font-size', xtre_label_font_size).attr('dy', xtre_label_font_size+spacing);
-        xtre.filter(node => node.depth > 0 && node.height > 0).select('.xtre_clear').attr('x', d => d.x1 - d.x0 - x_axis_nodes_y_height).attr('height', x_axis_nodes_y_height).attr('width', x_axis_nodes_y_height);
         xcat.attr('x', y_axis_leaves_x)
             .attr('y', d => x_category_y[d])
             .style('font-size', x_cat_font_size)
@@ -849,7 +838,7 @@ function Heatmap(samples_by_genes_matrix, gene_sets, classes, separate_zscore_by
     function clear_fig() {
         var transition = d3.transition().duration(500);
         g.selectAll('.rect,.ytre,.xtre,.xcat,.ycat').transition(transition).style('opacity', 0).remove();
-        g.selectAll('.legend').selectAll("*").transition(transition).style('opacity', 0).remove();
+        g.selectAll('.legend').selectAll('*').transition(transition).style('opacity', 0).remove();
     }
 
     ///////////////////////////////////////////////////////////////////////////
@@ -1024,11 +1013,8 @@ function Heatmap(samples_by_genes_matrix, gene_sets, classes, separate_zscore_by
         }
     }
 
-
-    function drag_legends(d) {
-
-        console.log('here');
-
+    function drag_legend(d) {
+        d3.select(this).attr('transform', 'translate('+d3.event.x+','+d3.event.y+')')
     }
 
     /////////////////////////////////////////////////////////////////////////////
