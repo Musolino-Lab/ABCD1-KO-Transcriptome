@@ -2,11 +2,7 @@
 
 
 
-drag legends
-
-
-hover
-select / set focus
+take everything out of the global scope
 
 
 drag catg better
@@ -15,10 +11,9 @@ drag catg better
 frontend router
 
 
-take everything out of the global scope
 
 
-canvas / webgl / webgl2 (deck.gl) ?
+
 
 
 
