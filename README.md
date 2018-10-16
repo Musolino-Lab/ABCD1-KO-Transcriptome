@@ -2,10 +2,11 @@
 
 
 
-legends
+drag legends
 
 
 hover
+select / set focus
 
 
 drag catg better

@@ -157,11 +157,11 @@ function Heatmap(samples_by_genes_matrix, gene_sets, classes, separate_zscore_by
     var drag_xcat_end = (d) => drag_catg_end( d, 'x');
 
 
-    var legends = g.append('g').attr('class', 'legends');
+    var legends = g.append('g').attr('class', 'legends').call(d3.drag().on('drag', drag_legends)).style('cursor', 'all-scroll').attr('fill', 'black');
 
-    var color_legend = legends.append("g").attr("class", 'legend').style("stroke", "black").attr("font-family", "sans-serif");
+    var color_legend = legends.append("g").attr("class", 'legend').styles(text_styles).style('font-size', 14);
 
-    var category_legends = _(category_colors).mapObject((color_scale, catg) => legends.append("g").attr("class", 'legend').style("stroke", "black").attr("font-family", "sans-serif") );
+    var category_legends = _(category_colors).mapObject((color_scale, catg) => legends.append("g").attr("class", 'legend').styles(text_styles).style('font-size', 14) );
 
     var rect_resizer = g.append('circle')
                         .attr('class', 'resizer')
@@ -509,6 +509,8 @@ function Heatmap(samples_by_genes_matrix, gene_sets, classes, separate_zscore_by
                                .attr('transform', d => 'rotate('+x_axis_leaves_rotation+','+y_category_x[d]+','+x_axis_leaves_y+')');
         t_last = t_last.transition().duration(500);
 
+        if (show_legends) { configure_legends(t_last); }
+
         // phase 3
             // re-arrange COLUMNS
         rect.transition(t_last).attr('x', d => x[d[x_attr]]).attr('width', rect_width-spacing);
@@ -540,7 +542,7 @@ function Heatmap(samples_by_genes_matrix, gene_sets, classes, separate_zscore_by
             .styles(text_styles)
             .style('font-size', x_font_size)
             .on('click', (d) => (x_attr === 'gene_id' ? GeneCards(d.data.name) : null))
-            .on('mouseover', setFocus).on('mouseout', removeFocus)
+            .on('mouseover', setHover).on('mouseout', removeHover).on('click', setFocus)
             .call(d3.drag().on('drag', drag_x).on('end', drag_x_end))
             .style('opacity', 0).transition(t_last).style('opacity', 1);
 
@@ -557,7 +559,7 @@ function Heatmap(samples_by_genes_matrix, gene_sets, classes, separate_zscore_by
                 .attr('width', d => d.x1 - d.x0)
                 .attr('height', d => d.y1 - d.y0)
                 .styles(styles['nodes'][x_attr])
-                .on('mouseover', setFocus).on('mouseout', removeFocus)
+                .on('mouseover', setHover).on('mouseout', removeHover).on('click', setFocus)
             .select(function() { return this.parentNode; })
                 .append('text')
                 .attr('class', 'xtre_label')
@@ -614,7 +616,7 @@ function Heatmap(samples_by_genes_matrix, gene_sets, classes, separate_zscore_by
             .style('text-anchor', (y_axis_leaves_position === 'before' ? 'end' : 'start'))
             .attr('dy', y_font_size)
             .on('click', (d) => (y_attr === 'gene_id' ? GeneCards(d.data.name) : null))
-            .on('mouseover', setFocus).on('mouseout', removeFocus)
+            .on('mouseover', setHover).on('mouseout', removeHover).on('click', setFocus)
             .call(d3.drag().on('drag', drag_y).on('end', drag_y_end))
             .style('opacity', 0).transition(t_last).style('opacity', 1);
 
@@ -631,7 +633,7 @@ function Heatmap(samples_by_genes_matrix, gene_sets, classes, separate_zscore_by
                 .attr('width', d => d.x1 - d.x0)
                 .attr('height', d => d.y1 - d.y0)
                 .styles(styles['nodes'][y_attr])
-                .on('mouseover', setFocus).on('mouseout', removeFocus)
+                .on('mouseover', setHover).on('mouseout', removeHover).on('click', setFocus)
             .select(function() { return this.parentNode; })
                 .append('text')
                 .attr('class', 'ytre_label')
@@ -684,14 +686,13 @@ function Heatmap(samples_by_genes_matrix, gene_sets, classes, separate_zscore_by
             .attr('width', rect_width-spacing)
             .attr('height', rect_height-spacing)
             .attr('fill', d => colors(d[values]))
-            .on('mouseover', setFocus).on('mouseout', removeFocus)
+            .on('mouseover', setHover).on('mouseout', removeHover).on('click', setFocus)
             .style('opacity', 0).transition(t_last).style('opacity', 1);
 
 
-        g.select('#rect_resizer').attr('cx', d3.max(Object.values(x))+rect_width).attr('cy', d3.max(Object.values(y))+rect_height);
-        g.select('#xtre_resizer').attr('cx', d3.max(Object.values(x))+rect_width).attr('cy', x_axis_nodes_y + (x_axis_nodes_position === 'before' ? x_axis_nodes_y_height : x_axis_nodes_y_height*x_tree.height));
-        g.select('#ytre_resizer').attr('cx', y_axis_nodes_x + (y_axis_nodes_position === 'before' ? y_axis_nodes_x_width : y_axis_nodes_x_width*y_tree.height)).attr('cy', d3.max(Object.values(y))+rect_height);
-
+        g.select('#rect_resizer').attr('cx', x_tree.x1).attr('cy', y_tree.x1);
+        g.select('#xtre_resizer').attr('cx', x_tree.x1).attr('cy', x_axis_nodes_y + (x_axis_nodes_position === 'before' ? x_axis_nodes_y_height : x_axis_nodes_y_height*x_tree.height));
+        g.select('#ytre_resizer').attr('cx', y_axis_nodes_x + (y_axis_nodes_position === 'before' ? y_axis_nodes_x_width : y_axis_nodes_x_width*y_tree.height)).attr('cy', y_tree.x1);
 
     }
 
@@ -740,17 +741,9 @@ function Heatmap(samples_by_genes_matrix, gene_sets, classes, separate_zscore_by
 
         // Legends
 
-        // legends_position
-
-
         if (show_legends) {
 
-            color_legend.call(d3.legendColor().scale(colors));
-
-            Object.entries(category_legends).forEach(([catg, legend]) => {
-                legend.call(d3.legendColor().scale(category_colors[catg]))
-                      .attr("transform", "translate(0,"+(color_legend.node().getBBox().height+40)+")");
-            });
+            configure_legends();
 
         } else {
 
@@ -760,6 +753,40 @@ function Heatmap(samples_by_genes_matrix, gene_sets, classes, separate_zscore_by
                 legend.selectAll("*").remove();
             });
         }
+
+    }
+
+    function configure_legends(transition) {
+
+        if (!transition) { transition = d3.transition().duration(0); }
+
+        color_legend.call(d3.legendColor().scale(colors).title(values));
+
+        if      (legends_position === 'left' || legends_position === 'right') { size_attr = 'height'; }
+        else if (legends_position === 'above' || legends_position === 'below') { size_attr = 'width'; }
+        var next_legend_pos = color_legend.node().getBBox()[size_attr];
+
+        Object.entries(category_legends).forEach(([catg, legend]) => {
+            legend.call(d3.legendColor().scale(category_colors[catg]).title(catg))
+                  .attr("transform", "translate("+(size_attr === 'width' ? next_legend_pos+20 : 0)+","+(size_attr === 'height' ? next_legend_pos+20 : 0)+")");
+            next_legend_pos += legend.node().getBBox()[size_attr]+20;
+        });
+
+        var max_legend_size = d3.max(Object.values(category_legends).map(legend => legend.node().getBBox()[size_attr]))+40;
+        var furthest_left = -10;
+        var furthest_right = x_tree.x1;
+        var top = x_axis_nodes_y_height;
+        var bottom = y_tree.x1;
+
+        if (y_axis_leaves_position === 'after') { furthest_right += text_max_width(y_tree, y_font_size); } else { furthest_left -= text_max_width(y_tree, y_font_size); }
+        if (y_axis_nodes_position === 'after') { furthest_right += y_tree.height * y_axis_nodes_x_width; } else { furthest_left -= y_tree.height * y_axis_nodes_x_width; }
+        if (x_axis_leaves_position === 'after') { bottom += text_max_width(x_tree, x_font_size); } else { top -= text_max_width(x_tree, x_font_size); }
+        if (x_axis_nodes_position === 'after') { bottom += x_tree.height * x_axis_nodes_y_height; } else { top -= x_tree.height * x_axis_nodes_y_height; }
+
+        if      (legends_position === 'right') { legends.transition(transition).attr("transform", "translate("+(furthest_right+40)+","+top+")"); }
+        else if (legends_position === 'left')  { legends.transition(transition).attr("transform", "translate("+(furthest_left-max_legend_size)+","+top+")"); }
+        else if (legends_position === 'above') { legends.transition(transition).attr("transform", "translate(0,"+(top-max_legend_size)+")"); }
+        else if (legends_position === 'below') { legends.transition(transition).attr("transform", "translate(0,"+(bottom+40)+")"); }
 
     }
 
@@ -815,10 +842,14 @@ function Heatmap(samples_by_genes_matrix, gene_sets, classes, separate_zscore_by
             .style('font-size', x_cat_font_size)
             .attr('dy', x_cat_font_size);
 
+        configure_legends();
+
     }
 
     function clear_fig() {
-        g.selectAll('.rect,.ytre,.xtre,.xcat,.ycat').transition(d3.transition().duration(500)).style('opacity', 0).remove();
+        var transition = d3.transition().duration(500);
+        g.selectAll('.rect,.ytre,.xtre,.xcat,.ycat').transition(transition).style('opacity', 0).remove();
+        g.selectAll('.legend').selectAll("*").transition(transition).style('opacity', 0).remove();
     }
 
     ///////////////////////////////////////////////////////////////////////////
@@ -994,10 +1025,28 @@ function Heatmap(samples_by_genes_matrix, gene_sets, classes, separate_zscore_by
     }
 
 
+    function drag_legends(d) {
+
+        console.log('here');
+
+    }
+
     /////////////////////////////////////////////////////////////////////////////
-                          ///////    Hover    ///////
+                          ///////    Hover / Focus    ///////
     /////////////////////////////////////////////////////////////////////////////
 
+
+    function setHover(d) {
+
+        // console.log(d);
+
+    }
+
+    function removeHover(d) {
+
+        // console.log(d);
+
+    }
 
     function setFocus(d) {
 
