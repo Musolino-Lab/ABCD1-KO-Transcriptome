@@ -554,7 +554,7 @@ function Heatmap(samples_by_genes_matrix, gene_sets, classes, separate_zscore_by
             .text(d => d.data.name)
             .styles(text_styles)
             .style('font-size', x_font_size)
-            .on('click', (d) => ((x_attr === 'gene_id' && d3.event.shiftKey) ? GeneCards(d.data.name) : setFocus(d)))
+            .on('click', (d) => ((x_attr === 'gene_id' && d3.event.metaKey) ? GeneCards(d.data.name) : setFocus(d)))
             .call(d3.drag().on('drag', drag_x).on('end', drag_x_end))
             .style('opacity', 0).transition(t_last).style('opacity', 1);
 
@@ -618,7 +618,7 @@ function Heatmap(samples_by_genes_matrix, gene_sets, classes, separate_zscore_by
             .styles(text_styles)
             .style('text-anchor', (y_axis_leaves_position === 'before' ? 'end' : 'start'))
             .attr('dy', y_font_size)
-            .on('click', (d) => ((y_attr === 'gene_id' && d3.event.shiftKey) ? GeneCards(d.data.name) : setFocus(d)))
+            .on('click', (d) => ((y_attr === 'gene_id' && d3.event.metaKey) ? GeneCards(d.data.name) : setFocus(d)))
             .call(d3.drag().on('drag', drag_y).on('end', drag_y_end))
             .style('opacity', 0).transition(t_last).style('opacity', 1);
 
