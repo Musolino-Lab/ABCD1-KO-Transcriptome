@@ -1,6 +1,6 @@
-# Ingore JL local files
 data/1m_mouse_scRNA/*
-
+Jang/data
+Wang/data
 
 # sftp-configs
 sftp-config.json
