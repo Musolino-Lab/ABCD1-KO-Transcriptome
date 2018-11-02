@@ -1,3 +1,4 @@
+let clamp = (min, max) => ((x) => Math.min(Math.max(x, min), max));
 
 
 function Bar(differential) {
@@ -176,7 +177,7 @@ function Bar(differential) {
         if (d3.event.ctrlKey) {
             current_transform.k = clamp(0.1, 5)(current_transform.k - d3.event.deltaY * 0.01);
         } else {
-            current_transform.y = clamp(-(ordered_gene_ids.length*rect_height-100), h)(current_transform.y - d3.event.deltaY);
+            current_transform.y = clamp((-w*2)*current_transform.k, 100)(current_transform.y - d3.event.deltaY);
         }
         g.attr("transform", current_transform);
     }
