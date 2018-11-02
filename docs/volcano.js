@@ -1,3 +1,4 @@
+let clamp = (min, max) => ((x) => Math.min(Math.max(x, min), max));
 
 function Volcano(differential) {
 
@@ -325,11 +326,11 @@ function Volcano(differential) {
         if (d3.event.ctrlKey) {
             current_transform.k = clamp(0.1, 5)(current_transform.k - d3.event.deltaY * 0.01);
         } else {
-            if (t) {
-                current_transform.x = clamp(-w*current_transform.k, w)(current_transform.x - d3.event.deltaY);
-            } else {
+            // if (t) {
+                // current_transform.x = clamp(-w*current_transform.k, w)(current_transform.x - d3.event.deltaY);
+            // } else {
                 current_transform.y = clamp(-w*current_transform.k, h)(current_transform.y - d3.event.deltaY);
-            }
+            // }
         }
         g.attr('transform', current_transform);
     }
